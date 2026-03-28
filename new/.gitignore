@@ -1,0 +1,7 @@
+env/
+__pycache__/
+node_modules/
+.env
+*.log
+*.pdf
+temp_resume.pdf
