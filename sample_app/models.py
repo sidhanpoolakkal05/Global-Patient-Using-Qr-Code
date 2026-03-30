@@ -9,6 +9,8 @@ import qrcode
 from io import BytesIO
 from django.core.files import File
 from PIL import Image
+from django.core.validators import MinValueValidator, MaxValueValidator
+from django.conf import settings
 
 class User(AbstractUser):
     USER_TYPE_CHOICES = (
@@ -522,8 +524,8 @@ class Medicine(models.Model):
     # Timestamps
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    added_by = models.ForeignKey('accounts.User', on_delete=models.SET_NULL, null=True)
-
+    # added_by = models.ForeignKey('accounts.User', on_delete=models.SET_NULL, null=True)
+    added_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
 
 class Prescription(models.Model):
     FREQUENCY_CHOICES = (
@@ -569,7 +571,7 @@ class Prescription(models.Model):
     is_active = models.BooleanField(default=True)
     dispensed = models.BooleanField(default=False)
     dispensed_date = models.DateTimeField(null=True, blank=True)
-    dispensed_by = models.ForeignKey('employees.Employee', on_delete=models.SET_NULL, null=True, blank=True)
+    dispensed_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
     
     # Timestamps
     prescribed_date = models.DateTimeField(auto_now_add=True)
