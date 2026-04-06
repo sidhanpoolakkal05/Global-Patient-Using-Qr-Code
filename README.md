@@ -106,7 +106,7 @@ Distributed under the MIT License. See `LICENSE` for more information.
 
 ## 📧 Support & Contact
 
-- **Maintained by**: [Abhimanyu](https://github.com/abhi963007)
-- **Project Link**: [https://github.com/abhi963007/mediscan](https://github.com/abhi963007/mediscan)
+- **Maintained by**:
+- **Project Link**:
 
 Built with ❤️ for Healthcare Providers.
