@@ -1,0 +1,82 @@
+{% extends "frontend/base_dashboard.html" %}
+{% block title %}Hospital Status – MediScan{% endblock %}
+{% block role_label %}Hospital Admin{% endblock %}
+{% block page_title %}Hospital Status{% endblock %}
+
+{% block sidebar_nav %}
+<a href="/dashboard/hospital/"          class="nav-link" data-exact="true"><i data-lucide="building-2" style="width:20px;height:20px;"></i><span class="nav-label">Hospital Status</span></a>
+<a href="/dashboard/hospital/staff/"    class="nav-link"><i data-lucide="users" style="width:20px;height:20px;"></i><span class="nav-label">Staff Registry</span></a>
+<a href="/dashboard/hospital/slots/"    class="nav-link"><i data-lucide="clock" style="width:20px;height:20px;"></i><span class="nav-label">Clinic Slots</span></a>
+<a href="/dashboard/hospital/settings/" class="nav-link"><i data-lucide="settings" style="width:20px;height:20px;"></i><span class="nav-label">Settings</span></a>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div><div class="page-header-title">Hospital Status</div><div class="page-header-sub" id="hosp-sub">Loading hospital info…</div></div>
+</div>
+
+<div class="grid-4" style="margin-bottom:2rem;">
+  <div class="stat-card"><div class="stat-card__icon" style="background:#ECFDF5;"><i data-lucide="users" style="width:24px;height:24px;color:#0F6E56;"></i></div><div class="stat-card__label">Staff Members</div><div class="stat-card__value" id="stat-staff">—</div></div>
+  <div class="stat-card"><div class="stat-card__icon" style="background:#EFF6FF;"><i data-lucide="stethoscope" style="width:24px;height:24px;color:#2563EB;"></i></div><div class="stat-card__label">Doctors</div><div class="stat-card__value" id="stat-doctors">—</div></div>
+  <div class="stat-card"><div class="stat-card__icon" style="background:#FEF3C7;"><i data-lucide="calendar" style="width:24px;height:24px;color:#D97706;"></i></div><div class="stat-card__label">Today's Appointments</div><div class="stat-card__value" id="stat-appts">—</div></div>
+  <div class="stat-card"><div class="stat-card__icon" style="background:#F3F4F6;"><i data-lucide="user-round" style="width:24px;height:24px;color:#6B7280;"></i></div><div class="stat-card__label">Patients Served</div><div class="stat-card__value" id="stat-patients">—</div></div>
+</div>
+
+<div class="grid-2">
+  <div class="card-premium">
+    <div class="page-header-title" style="font-size:1.1rem;margin-bottom:1.25rem;">Quick Actions</div>
+    <div style="display:flex;flex-direction:column;gap:0.75rem;">
+      <a href="/dashboard/hospital/staff/" style="display:flex;align-items:center;gap:1rem;padding:1rem 1.25rem;border-radius:1rem;background:#F9FAFB;border:1px solid #F3F4F6;text-decoration:none;transition:background 0.15s;" onmouseover="this.style.background='#F3F4F6'" onmouseout="this.style.background='#F9FAFB'">
+        <div style="width:2.5rem;height:2.5rem;border-radius:0.75rem;background:#ECFDF5;display:flex;align-items:center;justify-content:center;"><i data-lucide="user-plus" style="width:18px;height:18px;color:#0F6E56;"></i></div>
+        <div><div style="font-size:0.875rem;font-weight:700;color:#111827;">Add Staff Member</div><div style="font-size:0.7rem;color:#9CA3AF;">Register doctors and receptionists</div></div>
+      </a>
+      <a href="/dashboard/hospital/slots/" style="display:flex;align-items:center;gap:1rem;padding:1rem 1.25rem;border-radius:1rem;background:#F9FAFB;border:1px solid #F3F4F6;text-decoration:none;transition:background 0.15s;" onmouseover="this.style.background='#F3F4F6'" onmouseout="this.style.background='#F9FAFB'">
+        <div style="width:2.5rem;height:2.5rem;border-radius:0.75rem;background:#EFF6FF;display:flex;align-items:center;justify-content:center;"><i data-lucide="clock" style="width:18px;height:18px;color:#2563EB;"></i></div>
+        <div><div style="font-size:0.875rem;font-weight:700;color:#111827;">Configure Slots</div><div style="font-size:0.7rem;color:#9CA3AF;">Set clinic operating hours</div></div>
+      </a>
+      <a href="/dashboard/hospital/settings/" style="display:flex;align-items:center;gap:1rem;padding:1rem 1.25rem;border-radius:1rem;background:#F9FAFB;border:1px solid #F3F4F6;text-decoration:none;transition:background 0.15s;" onmouseover="this.style.background='#F3F4F6'" onmouseout="this.style.background='#F9FAFB'">
+        <div style="width:2.5rem;height:2.5rem;border-radius:0.75rem;background:#FEF3C7;display:flex;align-items:center;justify-content:center;"><i data-lucide="settings" style="width:18px;height:18px;color:#D97706;"></i></div>
+        <div><div style="font-size:0.875rem;font-weight:700;color:#111827;">Hospital Settings</div><div style="font-size:0.7rem;color:#9CA3AF;">Update hospital profile info</div></div>
+      </a>
+    </div>
+  </div>
+  <div class="card-premium">
+    <div class="page-header-title" style="font-size:1.1rem;margin-bottom:1.25rem;">Recent Staff</div>
+    <div id="recent-staff"><div class="empty-state"><div class="empty-state-icon">👤</div><p>Loading…</p></div></div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', async () => {
+  const user = requireAuth(['hospital_admin']);
+  if (!user) return;
+  populateTopbar(user);
+  document.getElementById('hosp-sub').textContent = user.hospital_name || 'Your hospital dashboard';
+
+  try {
+    const staff = await Auth.get('/api/auth/staff/');
+    const docs  = staff.filter(s => s.role === 'doctor');
+    document.getElementById('stat-staff').textContent   = staff.length;
+    document.getElementById('stat-doctors').textContent = docs.length;
+
+    const recentEl = document.getElementById('recent-staff');
+    if (!staff.length) { recentEl.innerHTML = '<div class="empty-state"><div class="empty-state-icon">👤</div><p>No staff yet.</p></div>'; }
+    else {
+      recentEl.innerHTML = staff.slice(0,5).map(s => `
+        <div style="display:flex;align-items:center;gap:1rem;padding:0.75rem 0;border-bottom:1px solid #F9FAFB;">
+          <div style="width:2.5rem;height:2.5rem;border-radius:0.75rem;background:var(--color-primary);color:white;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:0.875rem;font-family:var(--font-display);">${s.username.charAt(0).toUpperCase()}</div>
+          <div style="flex:1;"><div style="font-size:0.875rem;font-weight:700;color:#111827;">${s.username}</div><div style="font-size:0.7rem;color:#9CA3AF;">${s.role.replace('_',' ')}</div></div>
+          <span class="badge badge-green">Active</span>
+        </div>`).join('');
+    }
+  } catch(e) {}
+
+  try {
+    const appts = await Auth.get('/api/appointments/?date=' + new Date().toISOString().slice(0,10));
+    document.getElementById('stat-appts').textContent = Array.isArray(appts) ? appts.length : '—';
+  } catch(e) {}
+});
+</script>
+{% endblock %}

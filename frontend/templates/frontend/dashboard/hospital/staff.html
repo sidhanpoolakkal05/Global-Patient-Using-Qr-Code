@@ -1,0 +1,269 @@
+{% extends "frontend/base_dashboard.html" %}
+{% block title %}Staff Registry – MediScan{% endblock %}
+{% block role_label %}Hospital Admin{% endblock %}
+{% block page_title %}Staff Registry{% endblock %}
+
+{% block sidebar_nav %}
+<a href="/dashboard/hospital/"          class="nav-link"><i data-lucide="building-2" style="width:20px;height:20px;"></i><span class="nav-label">Hospital Status</span></a>
+<a href="/dashboard/hospital/staff/"    class="nav-link" data-exact="true"><i data-lucide="users" style="width:20px;height:20px;"></i><span class="nav-label">Staff Registry</span></a>
+<a href="/dashboard/hospital/slots/"    class="nav-link"><i data-lucide="clock" style="width:20px;height:20px;"></i><span class="nav-label">Clinic Slots</span></a>
+<a href="/dashboard/hospital/settings/" class="nav-link"><i data-lucide="settings" style="width:20px;height:20px;"></i><span class="nav-label">Settings</span></a>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div><div class="page-header-title">Staff Registry</div><div class="page-header-sub">Manage doctors and receptionists</div></div>
+  <button class="btn-primary" onclick="openModal('add-staff-modal')">
+    <i data-lucide="user-plus" style="width:16px;height:16px;"></i> Add Staff
+  </button>
+</div>
+
+<!-- Filters -->
+<div style="display:flex;gap:0.75rem;margin-bottom:1.5rem;flex-wrap:wrap;">
+  <button class="btn-primary" id="filter-all" onclick="filterRole('all')" style="padding:0.5rem 1.25rem;font-size:0.7rem;">All</button>
+  <button class="btn-secondary" id="filter-doctor" onclick="filterRole('doctor')" style="padding:0.5rem 1.25rem;font-size:0.7rem;">Doctors</button>
+  <button class="btn-secondary" id="filter-receptionist" onclick="filterRole('receptionist')" style="padding:0.5rem 1.25rem;font-size:0.7rem;">Receptionists</button>
+  <div class="search-bar" style="flex:1;max-width:24rem;margin-left:auto;">
+    <i data-lucide="search" style="width:16px;height:16px;"></i>
+    <input type="text" placeholder="Search staff…" oninput="filterSearch(this.value)" />
+  </div>
+</div>
+
+<div class="card-premium" id="staff-wrap">
+  <div class="empty-state"><div class="empty-state-icon">👥</div><p>Loading staff…</p></div>
+</div>
+{% endblock %}
+
+{% block modals %}
+<div class="modal-backdrop" id="add-staff-modal">
+  <div class="modal-box">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.5rem;">
+      <h3 style="font-family:var(--font-display);font-size:1.25rem;font-weight:900;color:#111827;letter-spacing:-0.04em;">Add Staff Member</h3>
+      <button onclick="closeModal('add-staff-modal')" style="color:#9CA3AF;"><i data-lucide="x" style="width:20px;height:20px;"></i></button>
+    </div>
+    <div class="alert alert-error" id="staff-error" style="margin-bottom:1rem;"></div>
+    <form onsubmit="addStaff(event)" style="display:flex;flex-direction:column;gap:0.875rem;">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.875rem;">
+        <input type="text"     name="username"  placeholder="Username *"     required class="input-field" />
+        <input type="email"    name="email"     placeholder="Email *"        required class="input-field" />
+      </div>
+      <input type="password"   name="password"  placeholder="Password *"     required class="input-field" />
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.875rem;">
+        <input type="text"     name="first_name" placeholder="First Name *"  required class="input-field" />
+        <input type="text"     name="last_name"  placeholder="Last Name *"   required class="input-field" />
+      </div>
+      <input type="text"       name="phone"     placeholder="Phone"                   class="input-field" />
+      <select id="staff-role" name="role" class="input-field" required onchange="toggleStaffFields(this.value)">
+        <option value="">-- Select Role --</option>
+        <option value="doctor">Doctor</option>
+        <option value="receptionist">Receptionist</option>
+      </select>
+      <div id="spec-group">
+        <input type="text" name="specialization" placeholder="Specialization *" class="input-field" />
+      </div>
+      <div id="dept-group" style="display:none;">
+        <input type="text" name="department" placeholder="Department *" class="input-field" />
+      </div>
+      <div style="display:flex;gap:0.875rem;margin-top:0.25rem;">
+        <button type="button" class="btn-secondary" style="flex:1;" onclick="closeModal('add-staff-modal')">Cancel</button>
+        <button type="submit" class="btn-primary" style="flex:1;">Add Staff</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Edit Staff Modal -->
+<div class="modal-backdrop" id="edit-staff-modal">
+  <div class="modal-box">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.5rem;">
+      <h3 style="font-family:var(--font-display);font-size:1.25rem;font-weight:900;color:#111827;letter-spacing:-0.04em;">Edit Staff Member</h3>
+      <button onclick="closeModal('edit-staff-modal')" style="color:#9CA3AF;"><i data-lucide="x" style="width:20px;height:20px;"></i></button>
+    </div>
+    <div class="alert alert-error" id="edit-staff-error" style="margin-bottom:1rem;"></div>
+    <form onsubmit="saveEdit(event)" style="display:flex;flex-direction:column;gap:0.875rem;">
+      <input type="hidden" name="staff_id" />
+      <input type="hidden" name="role" />
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.875rem;">
+        <input type="text"   name="first_name"     placeholder="First Name" class="input-field" />
+        <input type="text"   name="last_name"      placeholder="Last Name"  class="input-field" />
+      </div>
+      <input type="text"   name="phone"          placeholder="Phone"     class="input-field" />
+      
+      <div id="edit-spec-group">
+        <input type="text" name="specialization" placeholder="Specialization" class="input-field" />
+      </div>
+      <div id="edit-dept-group">
+        <input type="text" name="department" placeholder="Department" class="input-field" />
+      </div>
+      
+      <div style="display:flex;gap:0.875rem;margin-top:0.25rem;">
+        <button type="button" class="btn-secondary" style="flex:1;" onclick="closeModal('edit-staff-modal')">Cancel</button>
+        <button type="submit" class="btn-primary" style="flex:1;">Save Changes</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let allStaff = [];
+let currentFilter = 'all';
+
+document.addEventListener('DOMContentLoaded', async () => {
+  const user = requireAuth(['hospital_admin']);
+  if (!user) return;
+  populateTopbar(user);
+  await loadStaff();
+});
+
+async function loadStaff() {
+  try {
+    allStaff = await Auth.get('/api/auth/staff/');
+    applyFilters();
+  } catch(e) {
+    document.getElementById('staff-wrap').innerHTML = '<div class="empty-state"><div class="empty-state-icon">⚠️</div><p>Could not load staff.</p></div>';
+  }
+}
+
+function filterRole(role) {
+  currentFilter = role;
+  ['all','doctor','receptionist'].forEach(r => {
+    const btn = document.getElementById('filter-' + r);
+    if (btn) { btn.className = r === role ? 'btn-primary' : 'btn-secondary'; btn.style.padding='0.5rem 1.25rem'; btn.style.fontSize='0.7rem'; }
+  });
+  applyFilters();
+}
+
+let searchQ = '';
+function filterSearch(q) { searchQ = q.toLowerCase(); applyFilters(); }
+
+function applyFilters() {
+  let data = allStaff;
+  if (currentFilter !== 'all') data = data.filter(s => s.role === currentFilter);
+  if (searchQ) data = data.filter(s => s.username.toLowerCase().includes(searchQ) || (s.full_name||'').toLowerCase().includes(searchQ));
+  renderStaff(data);
+}
+
+function renderStaff(data) {
+  const wrap = document.getElementById('staff-wrap');
+  if (!data.length) { wrap.innerHTML = '<div class="empty-state"><div class="empty-state-icon">👥</div><p>No staff found.</p></div>'; return; }
+  wrap.innerHTML = `<table class="data-table">
+    <thead><tr><th>Name</th><th>Role</th><th>Phone</th><th>Specialization / Dept</th><th>Actions</th></tr></thead>
+    <tbody>${data.map(s => `<tr>
+      <td>
+        <div style="display:flex;align-items:center;gap:0.75rem;">
+          <div style="width:2.25rem;height:2.25rem;border-radius:0.6rem;background:var(--color-primary);color:white;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:0.75rem;">${s.username.charAt(0).toUpperCase()}</div>
+          <div><div style="font-weight:700;color:#111827;">${s.full_name || s.username}</div><div style="font-size:0.7rem;color:#9CA3AF;">@${s.username}</div></div>
+        </div>
+      </td>
+      <td><span class="badge ${s.role==='doctor'?'badge-blue':'badge-amber'}">${s.role.replace('_',' ')}</span></td>
+      <td>${s.phone || '—'}</td>
+      <td>${s.specialization || s.department || '—'}</td>
+      <td style="display:flex;gap:0.5rem;align-items:center;">
+        <button class="btn-secondary" style="padding:0.375rem 0.75rem;font-size:0.65rem;" onclick='openEdit(${JSON.stringify(s)})'>
+          <i data-lucide="pencil" style="width:12px;height:12px;"></i>
+        </button>
+        <button class="btn-danger" style="padding:0.375rem 0.75rem;font-size:0.65rem;" onclick="deleteStaff(${s.id}, '${s.username}')">
+          <i data-lucide="trash-2" style="width:12px;height:12px;"></i>
+        </button>
+      </td>
+    </tr>`).join('')}</tbody>
+  </table>`;
+  if(window.lucide) lucide.createIcons();
+}
+
+async function addStaff(e) {
+  e.preventDefault();
+  const form = e.target; const errEl = document.getElementById('staff-error');
+  errEl.classList.remove('show');
+  const payload = { 
+    username: form.username.value, 
+    email: form.email.value, 
+    password: form.password.value, 
+    first_name: form.first_name.value, 
+    last_name: form.last_name.value,
+    phone: form.phone.value, 
+    role: form.role.value, 
+    specialization: form.specialization.value,
+    department: form.department ? form.department.value : ''
+  };
+  try {
+    await Auth.post('/api/auth/create-staff/', payload);
+    closeModal('add-staff-modal'); showToast('Staff member added!'); form.reset(); await loadStaff();
+  } catch(err) {
+    const msg = typeof err === 'object' ? Object.values(err).flat().join(' ') : 'Failed.';
+    errEl.textContent = msg; errEl.classList.add('show');
+  }
+}
+
+function openEdit(staff) {
+  const form = document.querySelector('#edit-staff-modal form');
+  form.staff_id.value       = staff.id;
+  form.role.value           = staff.role;
+  form.first_name.value     = staff.first_name || '';
+  form.last_name.value      = staff.last_name || '';
+  form.phone.value          = staff.phone || '';
+  
+  if (staff.role === 'doctor') {
+    document.getElementById('edit-spec-group').style.display = 'block';
+    document.getElementById('edit-dept-group').style.display = 'none';
+    form.specialization.value = staff.specialization || '';
+  } else {
+    document.getElementById('edit-spec-group').style.display = 'none';
+    document.getElementById('edit-dept-group').style.display = 'block';
+    form.department.value = staff.department || '';
+  }
+  
+  openModal('edit-staff-modal');
+}
+
+async function saveEdit(e) {
+  e.preventDefault();
+  const form = e.target; const id = form.staff_id.value;
+  const errEl = document.getElementById('edit-staff-error');
+  errEl.classList.remove('show');
+  
+  const payload = { 
+    first_name: form.first_name.value, 
+    last_name: form.last_name.value,
+    phone: form.phone.value
+  };
+  
+  if (form.role.value === 'doctor') {
+    payload.specialization = form.specialization.value;
+  } else {
+    payload.department = form.department.value;
+  }
+
+  try {
+    await Auth.patch('/api/auth/staff/' + id + '/', payload);
+    closeModal('edit-staff-modal'); showToast('Staff updated!'); await loadStaff();
+  } catch(err) {
+    const msg = typeof err === 'object' ? Object.values(err).flat().join(' ') : 'Failed.';
+    errEl.textContent = msg; errEl.classList.add('show');
+  }
+}
+
+async function deleteStaff(id, name) {
+  if (!confirm(`Remove "${name}" from staff?`)) return;
+  try { await Auth.del('/api/auth/staff/delete/' + id + '/'); showToast('Staff removed.'); await loadStaff(); }
+  catch(e) { showToast('Failed.', 'error'); }
+}
+
+function toggleStaffFields(role) {
+  document.getElementById('spec-group').style.display = role === 'doctor' ? 'block' : 'none';
+  document.getElementById('dept-group').style.display = role === 'receptionist' ? 'block' : 'none';
+}
+
+function openModal(id)  { 
+  if (id === 'add-staff-modal') {
+    document.getElementById('staff-role').value = '';
+    toggleStaffFields('');
+  }
+  document.getElementById(id).classList.add('open'); 
+  if(window.lucide) lucide.createIcons(); 
+}
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+</script>
+{% endblock %}

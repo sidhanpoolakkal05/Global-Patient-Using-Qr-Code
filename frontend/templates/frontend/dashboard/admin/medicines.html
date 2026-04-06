@@ -1,0 +1,195 @@
+{% extends "frontend/base_dashboard.html" %}
+{% block title %}Medicine Master – MediScan{% endblock %}
+{% block role_label %}Global Admin{% endblock %}
+{% block page_title %}Medicine Master{% endblock %}
+
+{% block sidebar_nav %}
+<a href="/dashboard/admin/"            class="nav-link"><i data-lucide="layout-dashboard" style="width:20px;height:20px;"></i><span class="nav-label">Overview</span></a>
+<a href="/dashboard/admin/hospitals/"  class="nav-link"><i data-lucide="building-2" style="width:20px;height:20px;"></i><span class="nav-label">Hospitals Registry</span></a>
+<a href="/dashboard/admin/medicines/"  class="nav-link" data-exact="true"><i data-lucide="pill" style="width:20px;height:20px;"></i><span class="nav-label">Medicine Master</span></a>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div><div class="page-header-title">Medicine Catalog</div><div class="page-header-sub">Manage global medicine database for all hospitals</div></div>
+  <button onclick="openModal()" class="btn-primary" style="padding:0.75rem 1.25rem;"><i data-lucide="plus" style="width:16px;height:16px;"></i> Add New Medicine</button>
+</div>
+
+<div class="card-premium">
+  <div class="search-bar" style="margin-bottom:1.5rem;">
+    <i data-lucide="search" style="width:18px;height:18px;"></i>
+    <input type="text" id="med-search" placeholder="Search medicines by name, generic name, or manufacturer…" oninput="loadMedicines(this.value)" />
+  </div>
+
+  <div id="medicines-wrap" style="overflow-x:auto;">
+    <div class="empty-state"><div class="empty-state-icon">💊</div><p>Loading catalog…</p></div>
+  </div>
+</div>
+
+<!-- Add/Edit Modal -->
+<div id="med-modal" class="modal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.4);backdrop-filter:blur(4px);z-index:9999;align-items:center;justify-content:center;padding:1.5rem;">
+  <div class="card-premium" style="max-width:500px;width:100%;margin:0;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem;">
+      <div class="page-header-title" id="modal-title" style="font-size:1.1rem;">Add Medicine</div>
+      <button onclick="closeModal()" style="background:none;border:none;cursor:pointer;color:#9CA3AF;"><i data-lucide="x" style="width:20px;height:20px;"></i></button>
+    </div>
+    <form id="med-form" onsubmit="saveMedicine(event)" style="display:flex;flex-direction:column;gap:1rem;">
+      <input type="hidden" id="med-id" />
+      <div class="grid-2">
+        <div>
+          <label style="font-size:0.65rem;font-weight:800;text-transform:uppercase;color:#9CA3AF;margin-bottom:0.375rem;display:block;">Brand Name</label>
+          <input type="text" id="med-name" class="input-field" placeholder="e.g. Dolo 650" required />
+        </div>
+        <div>
+          <label style="font-size:0.65rem;font-weight:800;text-transform:uppercase;color:#9CA3AF;margin-bottom:0.375rem;display:block;">Generic Name</label>
+          <input type="text" id="med-generic" class="input-field" placeholder="e.g. Paracetamol" />
+        </div>
+      </div>
+      <div class="grid-3">
+        <div>
+          <label style="font-size:0.65rem;font-weight:800;text-transform:uppercase;color:#9CA3AF;margin-bottom:0.375rem;display:block;">Type</label>
+          <select id="med-type" class="input-field">
+            <option value="tablet">Tablet</option>
+            <option value="capsule">Capsule</option>
+            <option value="syrup">Syrup</option>
+            <option value="injection">Injection</option>
+            <option value="ointment">Ointment</option>
+            <option value="drops">Drops</option>
+            <option value="other">Other</option>
+          </select>
+        </div>
+        <div>
+          <label style="font-size:0.65rem;font-weight:800;text-transform:uppercase;color:#9CA3AF;margin-bottom:0.375rem;display:block;">Strength</label>
+          <input type="text" id="med-strength" class="input-field" placeholder="e.g. 500mg" />
+        </div>
+        <div>
+          <label style="font-size:0.65rem;font-weight:800;text-transform:uppercase;color:#9CA3AF;margin-bottom:0.375rem;display:block;">Unit</label>
+          <input type="text" id="med-unit" class="input-field" placeholder="Strip" />
+        </div>
+      </div>
+      <div>
+        <label style="font-size:0.65rem;font-weight:800;text-transform:uppercase;color:#9CA3AF;margin-bottom:0.5rem;display:block;">Manufacturer</label>
+        <input type="text" id="med-mfr" class="input-field" placeholder="e.g. GSK Pharma" />
+      </div>
+      <div>
+        <label style="font-size:0.65rem;font-weight:800;text-transform:uppercase;color:#9CA3AF;margin-bottom:0.5rem;display:block;">Description</label>
+        <textarea id="med-desc" class="input-field" style="resize:vertical;" rows="3" placeholder="Medicine details..."></textarea>
+      </div>
+      <button type="submit" class="btn-primary" style="padding:1rem;font-weight:900;margin-top:0.5rem;">
+        <i data-lucide="save" style="width:16px;height:16px;"></i> Proceed to Save
+      </button>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let allMeds = [];
+
+document.addEventListener('DOMContentLoaded', async () => {
+  const user = requireAuth(['admin']);
+  if (!user) return;
+  populateTopbar(user);
+  loadMedicines();
+});
+
+async function loadMedicines(search = '') {
+  try {
+    const resp = await Auth.get('/api/hospitals/medicines/?search=' + encodeURIComponent(search));
+    allMeds = resp.results || resp;
+    const wrap = document.getElementById('medicines-wrap');
+    if (!allMeds.length) {
+      wrap.innerHTML = '<div class="empty-state"><div class="empty-state-icon">💊</div><p>No medicines found.</p></div>';
+      return;
+    }
+    wrap.innerHTML = `<table class="data-table">
+      <thead><tr><th>Medicine</th><th>Generic Name</th><th>Type / Strength</th><th>Manufacturer</th><th>Actions</th></tr></thead>
+      <tbody>${allMeds.map(m => `<tr>
+        <td><strong style="color:#111827;">${m.name}</strong></td>
+        <td style="font-size:0.75rem;color:#6B7280;">${m.generic_name || '—'}</td>
+        <td><span class="badge badge-gray">${m.medicine_type}</span> <span style="font-size:0.7rem;color:#9CA3AF;margin-left:0.25rem;">${m.strength || ''}</span></td>
+        <td style="color:#6B7280;font-size:0.75rem;">${m.manufacturer || '—'}</td>
+        <td>
+          <div style="display:flex;gap:0.5rem;">
+            <button onclick="editMed(${m.id})" class="badge badge-amber" style="cursor:pointer;border:none;">Edit</button>
+            <button onclick="deleteMed(${m.id})" class="badge badge-red" style="cursor:pointer;border:none;">Delete</button>
+          </div>
+        </td>
+      </tr>`).join('')}</tbody>
+    </table>`;
+    if(window.lucide) lucide.createIcons();
+  } catch(e) {
+    document.getElementById('medicines-wrap').innerHTML = '<div class="empty-state"><div class="empty-state-icon">⚠️</div><p>Failed to load medicines.</p></div>';
+  }
+}
+
+function openModal() {
+  document.getElementById('modal-title').textContent = 'Add Medicine';
+  document.getElementById('med-id').value = '';
+  document.getElementById('med-form').reset();
+  document.getElementById('med-modal').style.display = 'flex';
+  if(window.lucide) lucide.createIcons();
+}
+
+function closeModal() {
+  document.getElementById('med-modal').style.display = 'none';
+} 
+
+function editMed(id) {
+  const m = allMeds.find(item => item.id == id);
+  if (!m) return;
+  document.getElementById('modal-title').textContent = 'Edit Medicine';
+  document.getElementById('med-id').value = m.id;
+  document.getElementById('med-name').value = m.name || '';
+  document.getElementById('med-generic').value = m.generic_name || '';
+  document.getElementById('med-strength').value = m.strength || '';
+  document.getElementById('med-type').value = m.medicine_type || 'tablet';
+  document.getElementById('med-unit').value = m.unit || '';
+  document.getElementById('med-mfr').value = m.manufacturer || '';
+  document.getElementById('med-desc').value = m.description || '';
+  document.getElementById('med-modal').style.display = 'flex';
+  if(window.lucide) lucide.createIcons();
+}
+
+async function saveMedicine(e) {
+  e.preventDefault();
+  const id = document.getElementById('med-id').value;
+  const payload = {
+    name: document.getElementById('med-name').value,
+    generic_name: document.getElementById('med-generic').value,
+    strength: document.getElementById('med-strength').value,
+    medicine_type: document.getElementById('med-type').value,
+    unit: document.getElementById('med-unit').value,
+    manufacturer: document.getElementById('med-mfr').value,
+    description: document.getElementById('med-desc').value
+  };
+
+  try {
+    if (id) {
+      await Auth.put('/api/hospitals/medicines/' + id + '/', payload);
+      showToast('Medicine updated successfully!');
+    } else {
+      await Auth.post('/api/hospitals/medicines/', payload);
+      showToast('New medicine added to primary catalog!');
+    }
+    closeModal();
+    loadMedicines();
+  } catch(err) {
+      const msg = typeof err === 'object' ? Object.values(err).flat().join(' ') : 'Failed to save.';
+      alert('Error: ' + msg);
+  }
+}
+
+async function deleteMed(id) {
+  if (!confirm('Are you sure you want to remove this medicine? This might affect historic prescriptions.')) return;
+  try {
+    await Auth.del('/api/hospitals/medicines/' + id + '/');
+    showToast('Medicine removed from system.');
+    loadMedicines();
+  } catch(e) {
+    showToast('Failed to delete medicine.');
+  }
+}
+</script>
+{% endblock %}

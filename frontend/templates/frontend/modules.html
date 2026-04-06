@@ -1,0 +1,60 @@
+{% extends "frontend/base.html" %}
+{% load static %}
+{% block title %}How It Works – MediScan{% endblock %}
+
+{% block body %}
+<nav class="public-nav">
+  <div class="public-nav-inner">
+    <a href="/" class="nav-brand">
+      <div class="nav-brand-icon"><i data-lucide="qr-code" style="width:24px;height:24px;"></i></div>
+      <div><div class="nav-brand-name">Medi<span>Scan</span></div><div class="nav-brand-sub">Health System</div></div>
+    </a>
+    <div class="nav-links">
+      <a href="/modules/" style="color:var(--color-primary);">How It Works</a>
+      <a href="/features/">Features</a>
+      <a href="/support/">Help</a>
+    </div>
+    <a href="/dashboard/" class="nav-cta">Dashboard</a>
+  </div>
+</nav>
+
+<div style="padding-top:10rem;">
+  <div class="container">
+    <div style="text-align:center;margin-bottom:5rem;" class="animate-fade-in-up">
+      <div style="display:inline-flex;align-items:center;gap:0.75rem;padding:0.625rem 1.5rem;border-radius:999px;background:#EFF6FF;border:1px solid #BFDBFE;margin-bottom:1.5rem;">
+        <i data-lucide="layers" style="width:16px;height:16px;color:#2563EB;"></i>
+        <span style="font-size:0.6rem;font-weight:900;text-transform:uppercase;letter-spacing:0.2em;color:#1D4ED8;font-family:'Montserrat',sans-serif;">System Modules</span>
+      </div>
+      <h1 style="font-size:clamp(3rem,6vw,5rem);font-weight:900;font-style:italic;text-transform:uppercase;letter-spacing:-0.05em;color:#111827;margin-bottom:1.5rem;font-family:'Manrope',sans-serif;">How MediScan Works</h1>
+      <p style="font-size:1.1rem;color:#6B7280;max-width:36rem;margin:0 auto;line-height:1.7;font-family:'Montserrat',sans-serif;">Five integrated modules that bring your entire hospital operation into one seamless platform.</p>
+    </div>
+
+    <!-- Modules -->
+    <div style="display:flex;flex-direction:column;gap:2rem;margin-bottom:5rem;">
+      {% for module in modules %}
+      <div class="card-premium animate-fade-in-up" style="display:flex;align-items:center;gap:2.5rem;animation-delay:{{ forloop.counter0 }}00ms;">
+        <div style="width:5rem;height:5rem;border-radius:1.5rem;background:{{ module.bg }};display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+          <i data-lucide="{{ module.icon }}" style="width:2.5rem;height:2.5rem;color:{{ module.color }};"></i>
+        </div>
+        <div style="flex:1;">
+          <div style="font-size:0.6rem;font-weight:900;text-transform:uppercase;letter-spacing:0.2em;color:{{ module.color }};margin-bottom:0.5rem;font-family:'Montserrat',sans-serif;">Module {{ forloop.counter }}</div>
+          <h3 style="font-size:1.25rem;font-weight:800;color:#111827;margin-bottom:0.5rem;letter-spacing:-0.03em;font-family:'Manrope',sans-serif;">{{ module.title }}</h3>
+          <p style="font-size:0.875rem;color:#6B7280;line-height:1.7;">{{ module.desc }}</p>
+        </div>
+        <div style="font-size:0.6rem;font-weight:900;text-transform:uppercase;letter-spacing:0.1em;color:#D1D5DB;font-family:'Montserrat',sans-serif;">0{{ forloop.counter }}</div>
+      </div>
+      {% endfor %}
+    </div>
+
+    <div style="text-align:center;padding:5rem;background:linear-gradient(135deg,#0F6E56,#014733);border-radius:3rem;color:white;margin-bottom:5rem;">
+      <h2 style="font-size:2.5rem;font-weight:900;font-style:italic;text-transform:uppercase;letter-spacing:-0.04em;color:white;margin-bottom:1rem;font-family:'Manrope',sans-serif;">Ready To Modernize?</h2>
+      <p style="color:rgba(255,255,255,0.7);margin-bottom:2rem;font-family:'Montserrat',sans-serif;">Get started with MediScan today and transform your hospital workflow.</p>
+      <a href="/register/" style="display:inline-flex;align-items:center;gap:0.5rem;padding:1rem 2.5rem;background:white;color:#065F46;border-radius:1rem;font-size:0.7rem;font-weight:900;text-transform:uppercase;letter-spacing:0.15em;font-family:'Montserrat',sans-serif;">Get Started Now</a>
+    </div>
+  </div>
+</div>
+
+<footer style="padding:3rem;border-top:1px solid #F3F4F6;text-align:center;">
+  <p style="font-size:0.6rem;font-weight:700;text-transform:uppercase;letter-spacing:0.15em;color:#D1D5DB;font-family:'Montserrat',sans-serif;">&copy; 2026 MediScan Healthcare Solutions.</p>
+</footer>
+{% endblock %}

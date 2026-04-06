@@ -1,0 +1,242 @@
+{% extends "frontend/base_dashboard.html" %}
+{% block title %}Hospitals Registry – MediScan{% endblock %}
+{% block role_label %}Global Admin{% endblock %}
+{% block page_title %}Hospitals Registry{% endblock %}
+
+{% block sidebar_nav %}
+<a href="/dashboard/admin/"            class="nav-link"><i data-lucide="layout-dashboard" style="width:20px;height:20px;"></i><span class="nav-label">Overview</span></a>
+<a href="/dashboard/admin/hospitals/"  class="nav-link" data-exact="true"><i data-lucide="building-2" style="width:20px;height:20px;"></i><span class="nav-label">Hospitals Registry</span></a>
+<a href="/dashboard/admin/medicines/"  class="nav-link"><i data-lucide="pill" style="width:20px;height:20px;"></i><span class="nav-label">Medicine Master</span></a>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div><div class="page-header-title">Hospitals Registry</div><div class="page-header-sub">Manage all registered hospitals and their administrative staff</div></div>
+  <button class="btn-primary" onclick="openModal('add-hospital-modal')" style="padding:0.75rem 1.25rem;">
+    <i data-lucide="plus" style="width:16px;height:16px;"></i> Add Hospital
+  </button>
+</div>
+
+<div class="card-premium">
+  <div class="search-bar" style="margin-bottom:1.5rem;">
+    <i data-lucide="search" style="width:18px;height:18px;"></i>
+    <input type="text" id="hospital-search" placeholder="Search hospitals by name or location…" oninput="filterHospitals(this.value)" />
+  </div>
+  <div id="hospitals-table-wrap">
+    <div class="empty-state"><div class="empty-state-icon">🏥</div><p>Loading registry…</p></div>
+  </div>
+</div>
+{% endblock %}
+
+{% block modals %}
+<!-- Add Hospital Modal -->
+<div id="add-hospital-modal" class="modal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.4);backdrop-filter:blur(4px);z-index:9999;align-items:center;justify-content:center;padding:1.5rem;">
+  <div class="card-premium" style="max-width:500px;width:100%;margin:0;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem;">
+      <div class="page-header-title" style="font-size:1.1rem;">Register New Hospital</div>
+      <button onclick="closeModal('add-hospital-modal')" style="background:none;border:none;cursor:pointer;color:#9CA3AF;"><i data-lucide="x" style="width:20px;height:20px;"></i></button>
+    </div>
+    <div class="alert alert-error" id="hosp-error" style="margin-bottom:1rem;"></div>
+    <form onsubmit="addHospital(event)" style="display:flex;flex-direction:column;gap:1.25rem;">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
+        <input type="text" name="name" placeholder="Hospital Name *" required class="input-field" />
+        <select name="hospital_type" class="input-field" style="height:auto;padding:0.75rem;">
+          <option value="general">General Hospital</option>
+          <option value="specialty">Specialty Hospital</option>
+          <option value="clinic">Clinic</option>
+          <option value="teaching">Teaching Hospital</option>
+          <option value="research">Research Hospital</option>
+        </select>
+      </div>
+      <input type="text" name="address" placeholder="Full Street Address *" required class="input-field" />
+      <input type="text" name="location" placeholder="City / Area *" required class="input-field" />
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
+        <input type="text" name="contact" placeholder="Contact Phone *" required class="input-field" />
+        <input type="email" name="email" placeholder="Official Email *" required class="input-field" />
+      </div>
+      <div style="display:flex;gap:1rem;margin-top:0.5rem;">
+        <button type="button" class="btn-secondary" style="flex:1;" onclick="closeModal('add-hospital-modal')">Cancel</button>
+        <button type="submit" class="btn-primary" style="flex:1;">Save Entity</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Hospital Admins Management Modal -->
+<div id="admins-modal" class="modal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.4);backdrop-filter:blur(4px);z-index:9999;align-items:center;justify-content:center;padding:1.5rem;">
+  <div class="card-premium" style="max-width:650px;width:100%;margin:0;max-height:90vh;overflow-y:auto;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem;">
+      <div class="page-header-title" style="font-size:1.1rem;">Hospital Leads: <span id="admins-hosp-name" style="color:var(--color-primary);"></span></div>
+      <button onclick="closeModal('admins-modal')" style="background:none;border:none;cursor:pointer;color:#9CA3AF;"><i data-lucide="x" style="width:20px;height:20px;"></i></button>
+    </div>
+    
+    <div style="margin-bottom:2rem; background:#F9FAFB; border:1px solid #F3F4F6; border-radius:1rem; padding:1.25rem;">
+      <h4 style="font-size:0.65rem; font-weight:800; text-transform:uppercase; color:#6B7280; margin-bottom:1rem; display:flex; align-items:center; gap:0.5rem;"><i data-lucide="user-plus" style="width:14px;height:14px;"></i> Appoint New Lead</h4>
+      <div class="alert alert-error" id="admins-error" style="margin-bottom:1rem;"></div>
+      <form onsubmit="addHospitalAdmin(event)" style="display:grid; grid-template-columns:1fr 1fr; gap:0.75rem;">
+        <input type="text" name="username" placeholder="Username" class="input-field" required />
+        <input type="email" name="email" placeholder="Email Address" class="input-field" required />
+        <input type="password" name="password" placeholder="Password" class="input-field" required />
+        <button type="submit" class="btn-primary" style="padding:0; font-size:0.8rem;">Add Admin</button>
+      </form>
+    </div>
+
+    <h4 style="font-size:0.65rem; font-weight:800; text-transform:uppercase; color:#6B7280; margin-bottom:1rem; display:flex; align-items:center; gap:0.5rem;"><i data-lucide="users" style="width:14px;height:14px;"></i> Active Administrators</h4>
+    <div id="admins-list-wrap"></div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let allHospitals = [];
+
+document.addEventListener('DOMContentLoaded', async () => {
+  const user = requireAuth(['admin']);
+  if (!user) return;
+  populateTopbar(user);
+  await loadHospitals();
+});
+
+async function loadHospitals() {
+  try {
+    const list = await Auth.get('/api/hospitals/');
+    allHospitals = list.results || list;
+    renderHospitals(allHospitals);
+  } catch(e) {
+    document.getElementById('hospitals-table-wrap').innerHTML = '<div class="empty-state"><div class="empty-state-icon">⚠️</div><p>Failed to load registry.</p></div>';
+  }
+}
+
+function renderHospitals(data) {
+  const wrap = document.getElementById('hospitals-table-wrap');
+  if (!data.length) { wrap.innerHTML = '<div class="empty-state"><div class="empty-state-icon">🏥</div><p>No matches found.</p></div>'; return; }
+  wrap.innerHTML = `<table class="data-table">
+    <thead><tr><th>Hospital</th><th>Location</th><th>Contact</th><th>Management</th></tr></thead>
+    <tbody>${data.map(h => `<tr>
+      <td><strong style="color:#111827;">${h.name}</strong></td>
+      <td style="color:#6B7280; font-size:0.75rem;">${h.address || '—'}</td>
+      <td style="font-size:0.75rem; color:#6B7280;">${h.phone || h.email || '—'}</td>
+      <td>
+        <div style="display:flex;gap:0.5rem;">
+          <button class="badge badge-indigo" style="cursor:pointer;border:none;" onclick="openAdminsModal(${h.id}, '${h.name}')">
+            <i data-lucide="shield-check" style="width:12px;height:12px;vertical-align:middle;"></i> Admins
+          </button>
+          <button class="badge badge-red" style="cursor:pointer;border:none;" onclick="deleteHospital(${h.id}, '${h.name}')">
+            <i data-lucide="trash-2" style="width:12px;height:12px;vertical-align:middle;"></i>
+          </button>
+        </div>
+      </td>
+    </tr>`).join('')}</tbody>
+  </table>`;
+  if(window.lucide) lucide.createIcons();
+}
+
+function filterHospitals(query) {
+  const q = query.toLowerCase();
+  const filtered = allHospitals.filter(h => h.name.toLowerCase().includes(q) || (h.address||'').toLowerCase().includes(q));
+  renderHospitals(filtered);
+}
+
+async function addHospital(e) {
+  e.preventDefault();
+  const form = e.target;
+  const errEl = document.getElementById('hosp-error');
+  errEl.classList.remove('show');
+  const payload = {
+    name: form.name.value,
+    hospital_type: form.hospital_type.value,
+    address: form.address.value,
+    location: form.location.value,
+    contact: form.contact.value,
+    email: form.email.value,
+  };
+  try {
+    await Auth.post('/api/hospitals/', payload);
+    closeModal('add-hospital-modal');
+    showToast('Hospital entity registered!');
+    form.reset();
+    await loadHospitals();
+  } catch(err) {
+    const msg = typeof err === 'object' ? Object.values(err).flat().join(' ') : 'Failed.';
+    errEl.textContent = msg; errEl.classList.add('show');
+  }
+}
+
+async function deleteHospital(id, name) {
+  if (!confirm(`Permanently remove "${name}" and all associated data?`)) return;
+  try {
+    await Auth.del('/api/hospitals/' + id + '/');
+    showToast('Hospital removed.');
+    await loadHospitals();
+  } catch(e) { showToast('Operation failed.', 'error'); }
+}
+
+let activeHospId = null;
+
+async function openAdminsModal(id, name) {
+  activeHospId = id;
+  document.getElementById('admins-hosp-name').textContent = name;
+  document.getElementById('admins-modal').style.display = 'flex';
+  await loadHospitalAdmins(id);
+}
+
+async function loadHospitalAdmins(hospId) {
+  const wrap = document.getElementById('admins-list-wrap');
+  wrap.innerHTML = '<p style="text-align:center;color:#9CA3AF;padding:1.5rem;">Synchronizing accounts…</p>';
+  try {
+    const admins = await Auth.get('/api/auth/hospital-admins/?hospital=' + hospId);
+    if (!admins.length) {
+      wrap.innerHTML = '<p style="text-align:center;color:#9CA3AF;padding:1.5rem;">No administrative leads appointed.</p>';
+      return;
+    }
+    wrap.innerHTML = `<table class="data-table" style="font-size:0.75rem;">
+      <thead><tr><th>Username</th><th>Email</th><th>Action</th></tr></thead>
+      <tbody>${admins.map(a => `<tr>
+        <td><strong>${a.username}</strong></td>
+        <td>${a.email}</td>
+        <td><button onclick="deleteAdmin(${a.id})" style="color:#EF4444;background:none;border:none;cursor:pointer;font-size:0.65rem;font-weight:800;">REVOKE</button></td>
+      </tr>`).join('')}</tbody>
+    </table>`;
+  } catch(e) {
+    wrap.innerHTML = '<p style="color:#EF4444;text-align:center;padding:1rem;">Error loading leads.</p>';
+  }
+}
+
+async function addHospitalAdmin(e) {
+  e.preventDefault();
+  const form = e.target;
+  const errEl = document.getElementById('admins-error');
+  errEl.classList.remove('show');
+  
+  const payload = {
+    username: form.username.value,
+    email: form.email.value,
+    password: form.password.value,
+    hospital: activeHospId
+  };
+
+  try {
+    await Auth.post('/api/auth/create-hospital-admin/', payload);
+    showToast('Success: Lead appointed.');
+    form.reset();
+    await loadHospitalAdmins(activeHospId);
+  } catch(err) {
+    const msg = typeof err === 'object' ? Object.values(err).flat().join(' ') : 'Failed.';
+    errEl.textContent = msg; errEl.classList.add('show');
+  }
+}
+
+async function deleteAdmin(id) {
+  if (!confirm('Revoke administrative access for this user?')) return;
+  try {
+    await Auth.del('/api/auth/delete-hospital-admin/' + id + '/');
+    showToast('Access revoked.');
+    await loadHospitalAdmins(activeHospId);
+  } catch(e) { showToast('Operation failed.', 'error'); }
+}
+
+function openModal(id)  { document.getElementById(id).style.display = 'flex'; if(window.lucide) lucide.createIcons(); }
+function closeModal(id) { document.getElementById(id).style.display = 'none'; }
+</script>
+{% endblock %}

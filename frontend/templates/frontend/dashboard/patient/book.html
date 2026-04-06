@@ -1,0 +1,170 @@
+{% extends "frontend/base_dashboard.html" %}
+{% block title %}Book Appointment – MediScan{% endblock %}
+{% block role_label %}Patient{% endblock %}
+{% block page_title %}Book Appointment{% endblock %}
+
+{% block sidebar_nav %}
+<a href="/dashboard/patient/"         class="nav-link"><i data-lucide="scan" style="width:20px;height:20px;"></i><span class="nav-label">Health Card</span></a>
+<a href="/dashboard/patient/book/"    class="nav-link" data-exact="true"><i data-lucide="calendar" style="width:20px;height:20px;"></i><span class="nav-label">Book Appointment</span></a>
+<a href="/dashboard/patient/history/" class="nav-link"><i data-lucide="heart-pulse" style="width:20px;height:20px;"></i><span class="nav-label">Medical History</span></a>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div><div class="page-header-title">Book Appointment</div><div class="page-header-sub">Browse available doctors and schedule a consultation</div></div>
+</div>
+
+<div class="grid-2">
+  <!-- Slot browser -->
+  <div class="card-premium">
+    <h3 style="font-family:var(--font-display);font-size:1.1rem;font-weight:900;color:#111827;letter-spacing:-0.04em;margin-bottom:1.25rem;">Available Slots</h3>
+
+    <div class="alert alert-error"   id="book-error"   style="margin-bottom:1rem;"></div>
+    <div class="alert alert-success" id="book-success" style="margin-bottom:1rem;"></div>
+
+    <div style="display:flex;gap:0.75rem;margin-bottom:1.25rem;flex-wrap:wrap;">
+      <input type="date" id="appt-date" class="input-field" style="width:auto;padding:0.625rem 1rem;font-size:0.8rem;" />
+      <button onclick="loadSlots()" class="btn-secondary" style="font-size:0.75rem;padding:0.625rem 1.25rem;">
+        <i data-lucide="search" style="width:14px;height:14px;"></i> Find Slots
+      </button>
+    </div>
+
+    <div id="slots-list">
+      <div class="empty-state"><div class="empty-state-icon">📅</div><p>Select a date and click Find Slots.</p></div>
+    </div>
+  </div>
+
+  <!-- My upcoming appointments -->
+  <div class="card-premium">
+    <h3 style="font-family:var(--font-display);font-size:1.1rem;font-weight:900;color:#111827;letter-spacing:-0.04em;margin-bottom:1.25rem;">My Upcoming Appointments</h3>
+    <div id="upcoming-appts">
+      <div class="empty-state"><div class="empty-state-icon">📋</div><p>Loading…</p></div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let myPatientId = null;
+
+document.addEventListener('DOMContentLoaded', async () => {
+  const user = requireAuth(['patient']);
+  if (!user) return;
+  populateTopbar(user);
+
+  // Set default date to today
+  document.getElementById('appt-date').value = new Date().toISOString().slice(0,10);
+
+  try {
+    const me = await Auth.get('/api/auth/profile/');
+    myPatientId = me.id;
+  } catch(e) {}
+
+  loadMyAppointments();
+});
+
+async function loadSlots() {
+  const date = document.getElementById('appt-date').value;
+  if (!date) return;
+  const errEl = document.getElementById('book-error');
+  const sucEl = document.getElementById('book-success');
+  errEl.classList.remove('show'); sucEl.classList.remove('show');
+
+  try {
+    const slots = await Auth.get('/api/hospitals/doctor-slots/');
+    const el    = document.getElementById('slots-list');
+    if (!slots.length) {
+      el.innerHTML = '<div class="empty-state"><div class="empty-state-icon">😔</div><p>No active slots found. Please try another day or hospital.</p></div>';
+      return;
+    }
+    el.innerHTML = slots.map(s => `
+      <div style="display:flex;align-items:center;gap:1rem;padding:1.25rem;border-radius:1.25rem;background:#fff;border:1px solid #F1F5F9;margin-bottom:1rem;box-shadow:0 2px 4px rgba(0,0,0,0.02);">
+        <div style="width:3rem;height:3rem;border-radius:1rem;background:var(--color-primary-light);display:flex;align-items:center;justify-content:center;opacity:0.8;">
+          <i data-lucide="stethoscope" style="width:20px;height:20px;color:var(--color-primary-dark);"></i>
+        </div>
+        <div style="flex:1;">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+            <div>
+              <div style="font-size:0.9rem;font-weight:800;color:#111827;">Dr. ${s.doctor_name || 'Doctor'}</div>
+              <div style="font-size:0.7rem;font-weight:700;color:var(--color-primary);margin-top:0.125rem;text-transform:uppercase;letter-spacing:0.05em;">${s.hospital_name || 'Hospital'}</div>
+            </div>
+            <div style="text-align:right;">
+              <div style="font-size:0.85rem;font-weight:900;color:#111827;">₹${s.consultation_fee}</div>
+              <div style="font-size:0.6rem;font-weight:600;color:#9CA3AF;text-transform:uppercase;">Fee</div>
+            </div>
+          </div>
+          <div style="font-size:0.75rem;color:#6B7280;margin-top:0.75rem;display:flex;align-items:center;gap:0.4rem;">
+             <i data-lucide="clock" style="width:14px;height:14px;"></i> ${s.start_time.substring(0,5)} – ${s.end_time.substring(0,5)}
+          </div>
+        </div>
+        <button onclick="bookSlot(${JSON.stringify(s).replace(/"/g, '&quot;')})"
+          class="btn-primary" style="font-size:0.7rem;padding:0.6rem 1.25rem;white-space:nowrap;border-radius:0.75rem;">
+          Book Now
+        </button>
+      </div>`).join('');
+    if(window.lucide) lucide.createIcons();
+  } catch(e) {
+    document.getElementById('book-error').textContent = 'Could not load slots.';
+    document.getElementById('book-error').classList.add('show');
+  }
+}
+
+async function bookSlot(s) {
+  const errEl = document.getElementById('book-error');
+  const sucEl = document.getElementById('book-success');
+  const date  = document.getElementById('appt-date').value;
+  errEl.classList.remove('show'); sucEl.classList.remove('show');
+  
+  if (!myPatientId) { errEl.textContent = 'Could not identify your patient record.'; errEl.classList.add('show'); return; }
+  
+  try {
+    const payload = {
+        patient: myPatientId,
+        doctor: s.doctor,
+        hospital: s.hospital,
+        appointment_date: date,
+        time_slot: s.start_time,
+        appointment_time: s.start_time,
+        consultation_fee: s.consultation_fee,
+        appointment_mode: 'online'
+    };
+    await Auth.post('/api/appointments/', payload);
+    sucEl.textContent = `Success! Appointment booked with Dr. ${s.doctor_name} at ${s.start_time.substring(0,5)} on ${date}.`;
+    sucEl.classList.add('show');
+    showToast('Appointment booked successfully!');
+    loadMyAppointments();
+    document.getElementById('slots-list').innerHTML = '<div class="empty-state"><div class="empty-state-icon">✅</div><p>Appointment confirmed. Check your upcoming visits.</p></div>';
+  } catch(err) {
+    // Friendly error messages
+    let msg = 'Booking failed. Please try again.';
+    if (err && err.error) msg = err.error;
+    else if (err && typeof err === 'object') msg = Object.values(err).flat().join(' ');
+    errEl.textContent = msg;
+    errEl.classList.add('show');
+  }
+}
+
+async function loadMyAppointments() {
+  try {
+    const appts = await Auth.get('/api/appointments/');
+    const arr   = Array.isArray(appts) ? appts : [];
+    const el    = document.getElementById('upcoming-appts');
+    if (!arr.length) { el.innerHTML = '<div class="empty-state"><div class="empty-state-icon">📋</div><p>No appointments yet.</p></div>'; return; }
+    const badgeMap = { pending:'badge-amber', confirmed:'badge-green', checked_in:'badge-blue', in_progress:'badge-blue', completed:'badge-green', cancelled:'badge-red', no_show:'badge-red' };
+    el.innerHTML = arr.slice(0,8).map(a => `
+      <div style="display:flex;align-items:center;gap:0.875rem;padding:0.875rem 0;border-bottom:1px solid #F9FAFB;">
+        <div style="width:2rem;height:2rem;border-radius:0.5rem;background:#EFF6FF;display:flex;align-items:center;justify-content:center;">
+          <i data-lucide="calendar" style="width:14px;height:14px;color:#2563EB;"></i>
+        </div>
+        <div style="flex:1;">
+          <div style="font-size:0.8rem;font-weight:700;color:#111827;">Dr. ${a.doctor_name||'Doctor'}</div>
+          <div style="font-size:0.65rem;color:#9CA3AF;">${a.appointment_date||''} &middot; ${a.slot_time||'—'}</div>
+        </div>
+        <span class="badge ${badgeMap[a.status]||'badge-gray'}">${a.status.replace('_',' ')}</span>
+      </div>`).join('');
+    if(window.lucide) lucide.createIcons();
+  } catch(e) {}
+}
+</script>
+{% endblock %}

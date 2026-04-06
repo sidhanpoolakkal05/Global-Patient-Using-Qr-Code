@@ -1,0 +1,69 @@
+{% extends "frontend/base_dashboard.html" %}
+{% block title %}Doctor Overview – MediScan{% endblock %}
+{% block role_label %}Doctor{% endblock %}
+{% block page_title %}Overview{% endblock %}
+
+{% block sidebar_nav %}
+<a href="/dashboard/doctor/"              class="nav-link" data-exact="true"><i data-lucide="stethoscope" style="width:20px;height:20px;"></i><span class="nav-label">Overview</span></a>
+<a href="/dashboard/doctor/appointments/" class="nav-link"><i data-lucide="calendar" style="width:20px;height:20px;"></i><span class="nav-label">Check-ups</span></a>
+<a href="/dashboard/doctor/treatment/"    class="nav-link"><i data-lucide="heart-pulse" style="width:20px;height:20px;"></i><span class="nav-label">Treatment Desk</span></a>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div><div class="page-header-title">Doctor Dashboard</div><div class="page-header-sub" id="doc-sub">Loading…</div></div>
+  <a href="/dashboard/doctor/appointments/" class="btn-primary"><i data-lucide="calendar" style="width:16px;height:16px;"></i> View Today's Queue</a>
+</div>
+
+<div class="grid-3" style="margin-bottom:2rem;">
+  <div class="stat-card"><div class="stat-card__icon" style="background:#EFF6FF;"><i data-lucide="calendar" style="width:24px;height:24px;color:#2563EB;"></i></div><div class="stat-card__label">Today's Appointments</div><div class="stat-card__value" id="stat-today">—</div></div>
+  <div class="stat-card"><div class="stat-card__icon" style="background:#FEF3C7;"><i data-lucide="clock" style="width:24px;height:24px;color:#D97706;"></i></div><div class="stat-card__label">Waiting</div><div class="stat-card__value" id="stat-waiting">—</div></div>
+  <div class="stat-card"><div class="stat-card__icon" style="background:#ECFDF5;"><i data-lucide="check-circle" style="width:24px;height:24px;color:#0F6E56;"></i></div><div class="stat-card__label">Completed</div><div class="stat-card__value" id="stat-done">—</div></div>
+</div>
+
+<div class="grid-2">
+  <div class="card-premium">
+    <div class="page-header-title" style="font-size:1.1rem;margin-bottom:1.25rem;">Next Patients</div>
+    <div id="next-patients"><div class="empty-state"><div class="empty-state-icon">👥</div><p>Loading…</p></div></div>
+  </div>
+  <div class="card-premium">
+    <div class="page-header-title" style="font-size:1.1rem;margin-bottom:1.25rem;">Your Schedule Today</div>
+    <div id="schedule-list"><div class="empty-state"><div class="empty-state-icon">📋</div><p>Loading schedule…</p></div></div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', async () => {
+  const user = requireAuth(['doctor']);
+  if (!user) return;
+  populateTopbar(user);
+  document.getElementById('doc-sub').textContent = (user.hospital_name||'') + ' · ' + (user.specialization||'General Physician');
+  const today = new Date().toISOString().slice(0,10);
+  try {
+    const appts  = await Auth.get('/api/appointments/?date=' + today);
+    const arr    = Array.isArray(appts) ? appts : [];
+    const waiting   = arr.filter(a => a.status==='pending');
+    const completed = arr.filter(a => a.status==='completed');
+    document.getElementById('stat-today').textContent   = arr.length;
+    document.getElementById('stat-waiting').textContent = waiting.length;
+    document.getElementById('stat-done').textContent    = completed.length;
+
+    const nxt = document.getElementById('next-patients');
+    if (!waiting.length) { nxt.innerHTML = '<div class="empty-state"><div class="empty-state-icon">✅</div><p>No patients waiting.</p></div>'; }
+    else {
+      nxt.innerHTML = waiting.slice(0,4).map(a => `
+        <div style="display:flex;align-items:center;gap:0.875rem;padding:0.875rem 0;border-bottom:1px solid #F9FAFB;">
+          <div style="width:2.25rem;height:2.25rem;border-radius:0.6rem;background:#FEF3C7;display:flex;align-items:center;justify-content:center;font-size:0.875rem;">🧑</div>
+          <div style="flex:1;">
+            <div style="font-size:0.875rem;font-weight:700;color:#111827;">${a.patient_name||'Patient'}</div>
+            <div style="font-size:0.65rem;color:#9CA3AF;">ID: ${a.patient_uhid||'—'} · ${a.slot_time||'—'}</div>
+          </div>
+          <span class="badge badge-amber">Waiting</span>
+        </div>`).join('');
+    }
+  } catch(e) {}
+});
+</script>
+{% endblock %}

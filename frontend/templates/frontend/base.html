@@ -1,0 +1,44 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{% block title %}MediScan HMS{% endblock %}</title>
+  <meta name="description" content="{% block meta_description %}MediScan – Healthcare Management System. QR-based patient cards, unified medical history, and seamless hospital operations.{% endblock %}" />
+
+  <!-- Favicon -->
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏥</text></svg>" />
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Manrope:wght@500;600;700;800&family=Montserrat:wght@700;800;900&display=swap" rel="stylesheet" />
+
+  <!-- Lucide Icons (CDN) -->
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+
+  <!-- Main CSS -->
+  <link rel="stylesheet" href="{% static 'frontend/css/styles.css' %}" />
+
+  {% block extra_css %}{% endblock %}
+</head>
+<body>
+  {% block body %}{% endblock %}
+
+  <!-- Toast Container -->
+  <div class="toast-container" id="toast-container"></div>
+
+  <!-- Lucide icon init -->
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      if (window.lucide) lucide.createIcons();
+    });
+  </script>
+
+  <!-- Auth JS -->
+  <script src="{% static 'frontend/js/auth.js' %}"></script>
+
+  {% block extra_js %}{% endblock %}
+</body>
+</html>

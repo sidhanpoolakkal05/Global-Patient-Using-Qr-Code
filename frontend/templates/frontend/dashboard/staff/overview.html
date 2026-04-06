@@ -1,0 +1,89 @@
+{% extends "frontend/base_dashboard.html" %}
+{% block title %}Staff Overview – MediScan{% endblock %}
+{% block role_label %}Receptionist{% endblock %}
+{% block page_title %}Overview{% endblock %}
+
+{% block sidebar_nav %}
+<a href="/dashboard/staff/"              class="nav-link" data-exact="true"><i data-lucide="building-2" style="width:20px;height:20px;"></i><span class="nav-label">Overview</span></a>
+<a href="/dashboard/staff/register/"     class="nav-link"><i data-lucide="user-plus" style="width:20px;height:20px;"></i><span class="nav-label">Register Patient</span></a>
+<a href="/dashboard/staff/patients/"     class="nav-link"><i data-lucide="users" style="width:20px;height:20px;"></i><span class="nav-label">Patients</span></a>
+<a href="/dashboard/staff/scan/"         class="nav-link"><i data-lucide="scan" style="width:20px;height:20px;"></i><span class="nav-label">Scan Patient Card</span></a>
+<a href="/dashboard/staff/appointments/" class="nav-link"><i data-lucide="calendar" style="width:20px;height:20px;"></i><span class="nav-label">Appointments</span></a>
+<a href="/dashboard/staff/slots/"        class="nav-link"><i data-lucide="clock" style="width:20px;height:20px;"></i><span class="nav-label">Configure Slots</span></a>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div><div class="page-header-title">Reception Desk</div><div class="page-header-sub" id="staff-sub">Loading…</div></div>
+  <a href="/dashboard/staff/register/" class="btn-primary"><i data-lucide="user-plus" style="width:16px;height:16px;"></i> Register Patient</a>
+</div>
+
+<div class="grid-4" style="margin-bottom:2rem;">
+  <div class="stat-card"><div class="stat-card__icon" style="background:#ECFDF5;"><i data-lucide="users" style="width:24px;height:24px;color:#0F6E56;"></i></div><div class="stat-card__label">Total Patients</div><div class="stat-card__value" id="stat-patients">—</div></div>
+  <div class="stat-card"><div class="stat-card__icon" style="background:#EFF6FF;"><i data-lucide="calendar" style="width:24px;height:24px;color:#2563EB;"></i></div><div class="stat-card__label">Today's Appointments</div><div class="stat-card__value" id="stat-appts">—</div></div>
+  <div class="stat-card"><div class="stat-card__icon" style="background:#FEF3C7;"><i data-lucide="clock" style="width:24px;height:24px;color:#D97706;"></i></div><div class="stat-card__label">Waiting</div><div class="stat-card__value" id="stat-waiting">—</div></div>
+  <div class="stat-card"><div class="stat-card__icon" style="background:#F3F4F6;"><i data-lucide="check-circle" style="width:24px;height:24px;color:#6B7280;"></i></div><div class="stat-card__label">Completed Today</div><div class="stat-card__value" id="stat-done">—</div></div>
+</div>
+
+<div class="grid-2">
+  <div class="card-premium">
+    <div class="page-header-title" style="font-size:1.1rem;margin-bottom:1.25rem;">Quick Actions</div>
+    {% for action in quick_actions %}
+    <a href="{{ action.url }}" style="display:flex;align-items:center;gap:1rem;padding:1rem 1.25rem;border-radius:1rem;background:#F9FAFB;border:1px solid #F3F4F6;text-decoration:none;margin-bottom:0.75rem;transition:background 0.15s;" onmouseover="this.style.background='#F3F4F6'" onmouseout="this.style.background='#F9FAFB'">
+      <div style="width:2.5rem;height:2.5rem;border-radius:0.75rem;background:{{ action.bg }};display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+        <i data-lucide="{{ action.icon }}" style="width:18px;height:18px;color:{{ action.color }};"></i>
+      </div>
+      <div>
+        <div style="font-size:0.875rem;font-weight:700;color:#111827;">{{ action.title }}</div>
+        <div style="font-size:0.7rem;color:#9CA3AF;">{{ action.desc }}</div>
+      </div>
+    </a>
+    {% endfor %}
+  </div>
+
+  <div class="card-premium">
+    <div class="page-header-title" style="font-size:1.1rem;margin-bottom:1.25rem;">Recent Appointments</div>
+    <div id="recent-appts"><div class="empty-state"><div class="empty-state-icon">📅</div><p>Loading…</p></div></div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', async () => {
+  const user = requireAuth(['receptionist']);
+  if (!user) return;
+  populateTopbar(user);
+  document.getElementById('staff-sub').textContent = (user.hospital_name || '') + ' · Reception Desk';
+
+  try {
+    const patients = await Auth.get('/api/patients/');
+    document.getElementById('stat-patients').textContent = Array.isArray(patients) ? patients.length : '—';
+  } catch(e) {}
+
+  const today = new Date().toISOString().slice(0, 10);
+  try {
+    const appts  = await Auth.get('/api/appointments/?date=' + today);
+    const arr    = Array.isArray(appts) ? appts : [];
+    document.getElementById('stat-appts').textContent   = arr.length;
+    document.getElementById('stat-waiting').textContent = arr.filter(a => a.status === 'pending').length;
+    document.getElementById('stat-done').textContent    = arr.filter(a => a.status === 'completed').length;
+
+    const el = document.getElementById('recent-appts');
+    if (!arr.length) { el.innerHTML = '<div class="empty-state"><div class="empty-state-icon">📅</div><p>No appointments today.</p></div>'; return; }
+    el.innerHTML = arr.slice(0, 5).map(a => `
+      <div style="display:flex;align-items:center;gap:0.875rem;padding:0.75rem 0;border-bottom:1px solid #F9FAFB;">
+        <div style="width:2rem;height:2rem;border-radius:0.5rem;background:#ECFDF5;display:flex;align-items:center;justify-content:center;">
+          <i data-lucide="user" style="width:14px;height:14px;color:#0F6E56;"></i>
+        </div>
+        <div style="flex:1;">
+          <div style="font-size:0.8rem;font-weight:700;color:#111827;">${a.patient_name || 'Patient'}</div>
+          <div style="font-size:0.65rem;color:#9CA3AF;">ID: ${a.patient_uhid || '—'} · ${a.slot_time || '—'}</div>
+        </div>
+        <span class="badge ${a.status==='completed'?'badge-green':a.status==='pending'?'badge-amber':'badge-gray'}">${a.status}</span>
+      </div>`).join('');
+    if(window.lucide) lucide.createIcons();
+  } catch(e) {}
+});
+</script>
+{% endblock %}

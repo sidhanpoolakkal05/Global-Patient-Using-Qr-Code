@@ -1,0 +1,165 @@
+{% extends "frontend/base_dashboard.html" %}
+{% block title %}Medical History – MediScan{% endblock %}
+{% block role_label %}Patient{% endblock %}
+{% block page_title %}Medical History{% endblock %}
+
+{% block sidebar_nav %}
+<a href="/dashboard/patient/"         class="nav-link"><i data-lucide="scan" style="width:20px;height:20px;"></i><span class="nav-label">Health Card</span></a>
+<a href="/dashboard/patient/book/"    class="nav-link"><i data-lucide="calendar" style="width:20px;height:20px;"></i><span class="nav-label">Book Appointment</span></a>
+<a href="/dashboard/patient/history/" class="nav-link" data-exact="true"><i data-lucide="heart-pulse" style="width:20px;height:20px;"></i><span class="nav-label">Medical History</span></a>
+{% endblock %}
+
+{% block content %}
+<div class="page-header" style="margin-bottom:2rem;">
+  <div>
+    <div class="page-header-title">Medical History</div>
+    <div class="page-header-sub">Your complete clinical journey & prescription timeline</div>
+  </div>
+  <div class="search-bar" style="background:white; border:1px solid #E2E8F0; width:300px;">
+    <i data-lucide="search" style="width:16px;height:16px;"></i>
+    <input type="text" id="history-search" placeholder="Search diagnosis or doctor…" oninput="filterHistory(this.value)" />
+  </div>
+</div>
+
+<div id="background-summary"></div>
+
+<div style="position:relative;">
+  <!-- Vertical Timeline Line -->
+  <div style="position:absolute; left:2.5rem; top:0; bottom:0; width:2px; background:linear-gradient(to bottom, var(--color-primary), #E2E8F0); opacity:0.1; z-index:1;"></div>
+
+  <div id="history-timeline" style="display:flex; flex-direction:column; gap:2.5rem; position:relative;">
+    <div class="empty-state"><div class="empty-state-icon">🔄</div><p>Syncing your clinical records…</p></div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let fullHistory = [];
+
+document.addEventListener('DOMContentLoaded', async () => {
+  const user = requireAuth(['patient']);
+  if (!user) return;
+  populateTopbar(user);
+  await loadHistory();
+});
+
+async function loadHistory() {
+  try {
+    const data = await Auth.get('/api/patients/treatment-history/');
+    fullHistory = data.history || [];
+    renderHistory(fullHistory);
+    
+    if (data.background) {
+      const el = document.getElementById('background-summary');
+      if (el) {
+        el.innerHTML = `
+          <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(200px, 1fr)); gap:1rem; margin-bottom:2rem;">
+            <div class="card-premium" style="margin:0; padding:1.25rem; border-top:3px solid #EF4444;">
+              <div style="font-size:0.6rem; font-weight:800; color:#EF4444; letter-spacing:0.1em; text-transform:uppercase; margin-bottom:0.5rem;">Known Allergies</div>
+              <div style="font-size:0.85rem; font-weight:700; color:#111827;">${data.background.allergies}</div>
+            </div>
+            <div class="card-premium" style="margin:0; padding:1.25rem; border-top:3px solid #F59E0B;">
+              <div style="font-size:0.6rem; font-weight:800; color:#F59E0B; letter-spacing:0.1em; text-transform:uppercase; margin-bottom:0.5rem;">Chronic Conditions</div>
+              <div style="font-size:0.85rem; font-weight:700; color:#111827;">${data.background.chronic}</div>
+            </div>
+            <div class="card-premium" style="margin:0; padding:1.25rem; border-top:3px solid var(--color-primary);">
+              <div style="font-size:0.6rem; font-weight:800; color:var(--color-primary); letter-spacing:0.1em; text-transform:uppercase; margin-bottom:0.5rem;">Major History</div>
+              <div style="font-size:0.85rem; font-weight:700; color:#111827;">${data.background.medical_history}</div>
+            </div>
+          </div>`;
+      }
+    }
+  } catch(e) {
+    document.getElementById('history-timeline').innerHTML = '<div class="empty-state"><div class="empty-state-icon">⚠️</div><p>Could not load medical records.</p></div>';
+  }
+}
+
+function filterHistory(q) {
+  const filtered = fullHistory.filter(r => 
+    r.doctor_name.toLowerCase().includes(q.toLowerCase()) || 
+    r.diagnosis.toLowerCase().includes(q.toLowerCase()) ||
+    r.notes.toLowerCase().includes(q.toLowerCase())
+  );
+  renderHistory(filtered);
+}
+
+function renderHistory(records) {
+  const el = document.getElementById('history-timeline');
+  if (!records || !records.length) {
+    el.innerHTML = '<div class="empty-state"><div class="empty-state-icon">📋</div><p>No matching records found.</p></div>';
+    return;
+  }
+
+  el.innerHTML = records.map(r => `
+    <div class="history-item" style="display:grid; grid-template-columns:80px 1fr; gap:2rem; animation:fadeInUp 0.4s ease;">
+      <!-- Date Indicator -->
+      <div style="text-align:right; padding-top:0.75rem;">
+        <div style="font-size:0.8rem; font-weight:900; color:#111827;">${r.display_date.split(' ')[0]}</div>
+        <div style="font-size:0.6rem; font-weight:800; text-transform:uppercase; color:#9CA3AF;">${r.display_date.split(' ')[1]} ${r.display_date.split(' ')[2]}</div>
+      </div>
+
+      <!-- Point on timeline -->
+      <div style="position:absolute; left:2.5rem; margin-left:-6px; width:14px; height:14px; border-radius:50%; background:var(--color-primary); border:3px solid white; box-shadow:0 0 0 4px rgba(15,110,86,0.1); z-index:2;"></div>
+
+      <!-- Content Card -->
+      <div class="card-premium" style="margin:0; padding:1.5rem; border-left:4px solid var(--color-primary);">
+        <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:1.25rem;">
+          <div>
+            <div style="font-size:1.1rem; font-weight:900; color:#111827; letter-spacing:-0.03em;">${r.diagnosis || 'General Consultation'}</div>
+            <div style="display:flex; align-items:center; gap:0.5rem; margin-top:0.25rem;">
+              <span style="font-size:0.75rem; color:#6B7280; font-weight:700;">${r.doctor_name}</span>
+              <span style="color:#D1D5DB;">&bull;</span>
+              <span style="font-size:0.75rem; color:#9CA3AF; font-weight:600;">${r.display_time}</span>
+            </div>
+          </div>
+          <div style="text-align:right;">
+            <div class="badge badge-green" style="font-size:0.55rem; padding:0.2rem 0.6rem;">${r.visit_type}</div>
+            <div style="font-size:0.6rem; color:#9CA3AF; font-weight:700; margin-top:0.4rem; text-transform:uppercase;">${r.hospital_name}</div>
+          </div>
+        </div>
+
+        <div style="padding:1rem; background:#F8FAFC; border-radius:1rem; border:1px solid #F1F5F9; margin-bottom:1.5rem;">
+          <div style="font-size:0.6rem; font-weight:800; text-transform:uppercase; color:#9CA3AF; margin-bottom:0.5rem; letter-spacing:0.05em;">Clinical Notes</div>
+          <p style="font-size:0.85rem; color:#334155; line-height:1.6; font-weight:500;">${r.notes || "No additional notes provided."}</p>
+        </div>
+
+        ${r.medicines && r.medicines.length ? `
+          <div>
+            <div style="font-size:0.6rem; font-weight:800; text-transform:uppercase; color:#9CA3AF; margin-bottom:1rem; letter-spacing:0.05em;">Prescribed Medications</div>
+            <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(280px, 1fr)); gap:1rem;">
+              ${r.medicines.map(m => `
+                <div style="background:white; border:1px solid #E2E8F0; border-radius:0.875rem; padding:0.875rem; display:flex; align-items:center; gap:0.875rem;">
+                  <div style="width:2.5rem; height:2.5rem; background:rgba(15,110,86,0.05); border-radius:0.75rem; display:flex; align-items:center; justify-content:center;">
+                    <i data-lucide="pill" style="width:1.25rem; height:1.25rem; color:var(--color-primary);"></i>
+                  </div>
+                  <div>
+                    <div style="font-size:0.8rem; font-weight:800; color:#1e293b;">${m.name}</div>
+                    <div style="font-size:0.65rem; color:var(--color-primary); font-weight:800; margin-top:0.1rem;">${m.dosage}</div>
+                  </div>
+                </div>
+              `).join('')}
+            </div>
+          </div>
+        ` : ''}
+
+        ${r.follow_up_date ? `
+          <div style="margin-top:1.5rem; padding-top:1.25rem; border-top:1px dashed #E2E8F0; display:flex; align-items:center; gap:0.5rem;">
+            <i data-lucide="calendar-clock" style="width:14px; height:14px; color:#D97706;"></i>
+            <span style="font-size:0.7rem; font-weight:800; color:#D97706; text-transform:uppercase;">Scheduled Follow-up: ${r.follow_up_date}</span>
+          </div>
+        ` : ''}
+      </div>
+    </div>
+  `).join('');
+  if(window.lucide) lucide.createIcons();
+}
+</script>
+<style>
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+</style>
+</script>
+{% endblock %}

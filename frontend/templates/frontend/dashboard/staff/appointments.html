@@ -1,0 +1,151 @@
+{% extends "frontend/base_dashboard.html" %}
+{% block title %}Appointments – MediScan{% endblock %}
+{% block role_label %}Receptionist{% endblock %}
+{% block page_title %}Appointments{% endblock %}
+
+{% block sidebar_nav %}
+<a href="/dashboard/staff/"              class="nav-link"><i data-lucide="building-2" style="width:20px;height:20px;"></i><span class="nav-label">Overview</span></a>
+<a href="/dashboard/staff/register/"     class="nav-link"><i data-lucide="user-plus" style="width:20px;height:20px;"></i><span class="nav-label">Register Patient</span></a>
+<a href="/dashboard/staff/patients/"     class="nav-link"><i data-lucide="users" style="width:20px;height:20px;"></i><span class="nav-label">Patients</span></a>
+<a href="/dashboard/staff/scan/"         class="nav-link"><i data-lucide="scan" style="width:20px;height:20px;"></i><span class="nav-label">Scan Patient Card</span></a>
+<a href="/dashboard/staff/appointments/" class="nav-link" data-exact="true"><i data-lucide="calendar" style="width:20px;height:20px;"></i><span class="nav-label">Appointments</span></a>
+<a href="/dashboard/staff/slots/"        class="nav-link"><i data-lucide="clock" style="width:20px;height:20px;"></i><span class="nav-label">Configure Slots</span></a>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div><div class="page-header-title">Appointments</div><div class="page-header-sub">View and manage today's appointment queue</div></div>
+  <div style="display:flex;gap:0.75rem;align-items:center;">
+    <input type="date" id="appt-date" class="input-field" style="width:auto;padding:0.5rem 1rem;font-size:0.8rem;" onchange="loadAppointments(this.value)" />
+  </div>
+</div>
+
+<!-- Status tabs -->
+<div style="display:flex;gap:0.5rem;margin-bottom:1.5rem;flex-wrap:wrap;">
+  <button class="btn-primary" id="tab-all"       onclick="setTab('all')"       style="padding:0.5rem 1.25rem;font-size:0.7rem;">All</button>
+  <button class="btn-secondary" id="tab-pending"   onclick="setTab('pending')"   style="padding:0.5rem 1.25rem;font-size:0.7rem;">Pending</button>
+  <button class="btn-secondary" id="tab-completed" onclick="setTab('completed')" style="padding:0.5rem 1.25rem;font-size:0.7rem;">Completed</button>
+</div>
+
+<div class="card-premium" id="appts-wrap">
+  <div class="empty-state"><div class="empty-state-icon">📅</div><p>Loading appointments…</p></div>
+</div>
+
+<!-- Delete Confirm Modal -->
+<div id="delete-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:9999;align-items:center;justify-content:center;">
+  <div style="background:white;border-radius:1.25rem;padding:2rem;max-width:380px;width:90%;box-shadow:0 24px 64px rgba(0,0,0,0.2);text-align:center;">
+    <div style="width:3.5rem;height:3.5rem;background:#FEF2F2;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 1rem;">
+      <i data-lucide="trash-2" style="width:1.5rem;height:1.5rem;color:#EF4444;"></i>
+    </div>
+    <h3 style="font-size:1rem;font-weight:900;color:#111827;margin-bottom:0.5rem;">Delete Appointment?</h3>
+    <p style="font-size:0.8rem;color:#6B7280;margin-bottom:1.5rem;">This action is permanent and cannot be undone.</p>
+    <div style="display:flex;gap:0.75rem;">
+      <button onclick="closeDeleteModal()" class="btn-secondary" style="flex:1;">Cancel</button>
+      <button id="confirm-delete-btn" class="btn-primary" style="flex:1;background:#EF4444;">Yes, Delete</button>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let allAppts = []; let currentTab = 'all';
+
+document.addEventListener('DOMContentLoaded', () => {
+  const user = requireAuth(['receptionist']);
+  if (!user) return;
+  populateTopbar(user);
+  const dateEl = document.getElementById('appt-date');
+  dateEl.value = new Date().toISOString().slice(0, 10);
+  loadAppointments(dateEl.value);
+
+  // Delete confirmation handler
+  document.getElementById('confirm-delete-btn').addEventListener('click', async () => {
+    if (!_deleteTargetId) return;
+    const btn = document.getElementById('confirm-delete-btn');
+    btn.textContent = 'Deleting…';
+    btn.disabled = true;
+    try {
+      await Auth.del('/api/appointments/' + _deleteTargetId + '/');
+      showToast('Appointment deleted successfully.');
+      closeDeleteModal();
+      await loadAppointments(document.getElementById('appt-date').value);
+    } catch(e) {
+      showToast('Failed to delete. ' + (e?.error || e?.detail || ''), 'error');
+      btn.textContent = 'Yes, Delete';
+      btn.disabled = false;
+    }
+  });
+});
+
+function setTab(tab) {
+  currentTab = tab;
+  ['all','pending','completed'].forEach(t => {
+    const btn = document.getElementById('tab-' + t);
+    btn.className = t === tab ? 'btn-primary' : 'btn-secondary';
+    btn.style.cssText = 'padding:0.5rem 1.25rem;font-size:0.7rem;';
+  });
+  renderAppts();
+}
+
+async function loadAppointments(date) {
+  try {
+    allAppts = await Auth.get('/api/appointments/?date=' + date);
+    if (!Array.isArray(allAppts)) allAppts = [];
+    renderAppts();
+  } catch(e) {
+    document.getElementById('appts-wrap').innerHTML = '<div class="empty-state"><div class="empty-state-icon">⚠️</div><p>Could not load appointments.</p></div>';
+  }
+}
+
+function renderAppts() {
+  const data = currentTab === 'all' ? allAppts : allAppts.filter(a => a.status === currentTab);
+  const wrap = document.getElementById('appts-wrap');
+  if (!data.length) { wrap.innerHTML = '<div class="empty-state"><div class="empty-state-icon">📅</div><p>No appointments found.</p></div>'; return; }
+  wrap.innerHTML = `<table class="data-table">
+    <thead><tr><th>Patient</th><th>UHID</th><th>Doctor</th><th>Time</th><th>Status</th><th>Actions</th></tr></thead>
+    <tbody>${data.map(a => `<tr>
+      <td><strong>${a.patient_name||'Patient'}</strong></td>
+      <td><span class="badge badge-green" style="font-family:'Montserrat',sans-serif;font-size:0.6rem;">${a.patient_uhid||'—'}</span></td>
+      <td>${a.doctor_full_name||'Doctor'}</td>
+      <td>${a.slot_time||'—'}</td>
+      <td><span class="badge ${a.status==='completed'?'badge-green':a.status==='pending'?'badge-amber':'badge-red'}">${a.status}</span></td>
+      <td>
+        <div style="display:flex;gap:0.5rem;">
+          ${a.status==='pending'?`<button class="btn-secondary" style="padding:0.375rem 0.75rem;font-size:0.65rem;" onclick="markDone(${a.id})">Mark Done</button>`:''}
+          <button class="btn-secondary" style="padding:0.375rem 0.75rem;font-size:0.65rem;color:#EF4444;border-color:#FEE2E2;" onclick="deleteAppointment(${a.id})">
+            <i data-lucide="trash-2" style="width:12px;height:12px;"></i> Delete
+          </button>
+        </div>
+      </td>
+    </tr>`).join('')}</tbody>
+  </table>`;
+  if(window.lucide) lucide.createIcons();
+}
+
+async function markDone(id) {
+  try {
+    await Auth.patch('/api/appointments/' + id + '/', { status: 'completed' });
+    showToast('Marked as completed.'); 
+    const dateEl = document.getElementById('appt-date');
+    await loadAppointments(dateEl.value);
+  } catch(e) { showToast('Failed.', 'error'); }
+}
+
+let _deleteTargetId = null;
+
+function deleteAppointment(id) {
+  _deleteTargetId = id;
+  const modal = document.getElementById('delete-modal');
+  modal.style.display = 'flex';
+  if (window.lucide) lucide.createIcons();
+}
+
+function closeDeleteModal() {
+  document.getElementById('delete-modal').style.display = 'none';
+  _deleteTargetId = null;
+}
+
+
+</script>
+{% endblock %}

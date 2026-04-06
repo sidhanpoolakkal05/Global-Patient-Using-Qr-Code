@@ -1,0 +1,59 @@
+{% extends "frontend/base_dashboard.html" %}
+{% block title %}Check-ups – MediScan{% endblock %}
+{% block role_label %}Doctor{% endblock %}
+{% block page_title %}Check-ups{% endblock %}
+
+{% block sidebar_nav %}
+<a href="/dashboard/doctor/"              class="nav-link"><i data-lucide="stethoscope" style="width:20px;height:20px;"></i><span class="nav-label">Overview</span></a>
+<a href="/dashboard/doctor/appointments/" class="nav-link" data-exact="true"><i data-lucide="calendar" style="width:20px;height:20px;"></i><span class="nav-label">Check-ups</span></a>
+<a href="/dashboard/doctor/treatment/"    class="nav-link"><i data-lucide="heart-pulse" style="width:20px;height:20px;"></i><span class="nav-label">Treatment Desk</span></a>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div><div class="page-header-title">Check-ups</div><div class="page-header-sub">Patient appointment queue</div></div>
+  <input type="date" id="appt-date" class="input-field" style="width:auto;padding:0.5rem 1rem;font-size:0.8rem;" onchange="loadAppts(this.value)" />
+</div>
+
+<div class="card-premium" id="appts-wrap">
+  <div class="empty-state"><div class="empty-state-icon">📅</div><p>Loading…</p></div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  const user = requireAuth(['doctor']);
+  if (!user) return;
+  populateTopbar(user);
+  const el = document.getElementById('appt-date');
+  el.value = new Date().toISOString().slice(0,10);
+  loadAppts(el.value);
+});
+
+async function loadAppts(date) {
+  try {
+    const appts = await Auth.get('/api/appointments/?date=' + date);
+    const arr   = Array.isArray(appts) ? appts : [];
+    const wrap  = document.getElementById('appts-wrap');
+    if (!arr.length) { wrap.innerHTML = '<div class="empty-state"><div class="empty-state-icon">📅</div><p>No appointments on this date.</p></div>'; return; }
+    wrap.innerHTML = `<table class="data-table">
+      <thead><tr><th>#</th><th>Patient</th><th>UHID</th><th>Time</th><th>Status</th><th>Actions</th></tr></thead>
+      <tbody>${arr.map((a,i) => `<tr>
+        <td style="color:#9CA3AF;font-weight:700;">${String(i+1).padStart(2,'0')}</td>
+        <td><strong>${a.patient_name||'Patient'}</strong></td>
+        <td><span class="badge badge-green" style="font-family:'Montserrat';">${a.patient_uhid||'—'}</span></td>
+        <td>${a.slot_time||'—'}</td>
+        <td><span class="badge ${a.status==='completed'?'badge-green':a.status==='pending'?'badge-amber':a.status==='checked_in'||a.status==='in_progress'?'badge-blue':'badge-red'}">${a.status.replace('_',' ')}</span></td>
+        <td style="display:flex;gap:0.5rem;">
+          <a href="/dashboard/doctor/treatment/?appt=${a.id}" class="btn-primary" style="padding:0.375rem 0.875rem;font-size:0.65rem;">
+            <i data-lucide="stethoscope" style="width:12px;height:12px;"></i> Treat
+          </a>
+        </td>
+      </tr>`).join('')}</tbody>
+    </table>`;
+    if(window.lucide) lucide.createIcons();
+  } catch(e) { document.getElementById('appts-wrap').innerHTML = '<div class="empty-state"><div class="empty-state-icon">⚠️</div><p>Could not load appointments.</p></div>'; }
+}
+</script>
+{% endblock %}

@@ -1,0 +1,21 @@
+{% extends "frontend/base.html" %}
+{% block title %}Dashboard – MediScan{% endblock %}
+{% block body %}
+<div style="min-height:100vh;display:flex;align-items:center;justify-content:center;background:var(--color-background);">
+  <div style="text-align:center;">
+    <div style="width:4rem;height:4rem;border-radius:1.25rem;background:var(--color-primary);display:flex;align-items:center;justify-content:center;margin:0 auto 1.5rem;box-shadow:0 8px 24px rgba(15,110,86,0.25);">
+      <i data-lucide="heart-pulse" style="width:2rem;height:2rem;color:white;"></i>
+    </div>
+    <p style="font-size:0.875rem;color:#6B7280;font-family:var(--font-display);font-weight:700;">Redirecting to your dashboard…</p>
+  </div>
+</div>
+{% block extra_js %}
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    if (!Auth.isAuthenticated()) { window.location.href = '/login/'; return; }
+    const user = Auth.getUser();
+    redirectByRole(user.role);
+  });
+</script>
+{% endblock %}
+{% endblock %}

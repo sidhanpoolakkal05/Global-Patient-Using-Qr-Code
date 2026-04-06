@@ -1,0 +1,81 @@
+{% extends "frontend/base.html" %}
+{% load static %}
+{% block title %}Support – MediScan{% endblock %}
+
+{% block body %}
+<nav class="public-nav">
+  <div class="public-nav-inner">
+    <a href="/" class="nav-brand">
+      <div class="nav-brand-icon"><i data-lucide="qr-code" style="width:24px;height:24px;"></i></div>
+      <div><div class="nav-brand-name">Medi<span>Scan</span></div><div class="nav-brand-sub">Health System</div></div>
+    </a>
+    <div class="nav-links">
+      <a href="/modules/">How It Works</a>
+      <a href="/features/">Features</a>
+      <a href="/support/" style="color:var(--color-primary);">Help</a>
+    </div>
+    <a href="/dashboard/" class="nav-cta">Dashboard</a>
+  </div>
+</nav>
+
+<div style="padding-top:10rem;">
+  <div class="container">
+    <div style="text-align:center;margin-bottom:5rem;" class="animate-fade-in-up">
+      <div style="display:inline-flex;align-items:center;gap:0.75rem;padding:0.625rem 1.5rem;border-radius:999px;background:#FEF3C7;border:1px solid #FDE68A;margin-bottom:1.5rem;">
+        <i data-lucide="life-buoy" style="width:16px;height:16px;color:#D97706;"></i>
+        <span style="font-size:0.6rem;font-weight:900;text-transform:uppercase;letter-spacing:0.2em;color:#92400E;font-family:'Montserrat',sans-serif;">Help & Support</span>
+      </div>
+      <h1 style="font-size:clamp(3rem,6vw,5rem);font-weight:900;font-style:italic;text-transform:uppercase;letter-spacing:-0.05em;color:#111827;margin-bottom:1.5rem;font-family:'Manrope',sans-serif;">We're Here To Help</h1>
+      <p style="font-size:1.1rem;color:#6B7280;max-width:36rem;margin:0 auto;line-height:1.7;font-family:'Montserrat',sans-serif;">Find answers to common questions or reach out to our support team.</p>
+    </div>
+
+    <!-- Contact cards -->
+    <div class="grid-3" style="margin-bottom:4rem;">
+      {% for contact in contacts %}
+      <div class="card-premium" style="text-align:center;padding:2.5rem;">
+        <div style="width:4rem;height:4rem;border-radius:1.25rem;background:{{ contact.bg }};display:flex;align-items:center;justify-content:center;margin:0 auto 1.5rem;">
+          <i data-lucide="{{ contact.icon }}" style="width:2rem;height:2rem;color:{{ contact.color }};"></i>
+        </div>
+        <h3 style="font-size:1rem;font-weight:800;color:#111827;margin-bottom:0.5rem;font-family:'Manrope',sans-serif;">{{ contact.title }}</h3>
+        <p style="font-size:0.8rem;color:#6B7280;margin-bottom:1rem;">{{ contact.desc }}</p>
+        <a href="{{ contact.href }}" style="font-size:0.75rem;font-weight:700;color:{{ contact.color }};text-decoration:underline;text-underline-offset:4px;">{{ contact.link }}</a>
+      </div>
+      {% endfor %}
+    </div>
+
+    <!-- FAQ -->
+    <div class="card-premium" style="margin-bottom:5rem;">
+      <h2 style="font-size:1.5rem;font-weight:900;color:#111827;margin-bottom:2rem;font-family:'Manrope',sans-serif;letter-spacing:-0.04em;">Frequently Asked Questions</h2>
+      <div style="display:flex;flex-direction:column;gap:0;">
+        {% for faq in faqs %}
+        <div style="border-top:1px solid #F3F4F6;padding:1.5rem 0;" class="faq-item">
+          <button onclick="toggleFaq({{ forloop.counter0 }})" style="width:100%;display:flex;align-items:center;justify-content:space-between;background:none;border:none;cursor:pointer;text-align:left;">
+            <span style="font-size:0.9rem;font-weight:700;color:#111827;font-family:'Manrope',sans-serif;">{{ faq.q }}</span>
+            <i data-lucide="chevron-down" style="width:18px;height:18px;color:#9CA3AF;transition:transform 0.2s;flex-shrink:0;" id="faq-icon-{{ forloop.counter0 }}"></i>
+          </button>
+          <div id="faq-answer-{{ forloop.counter0 }}" style="display:none;padding-top:0.875rem;">
+            <p style="font-size:0.875rem;color:#6B7280;line-height:1.7;">{{ faq.a }}</p>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+</div>
+
+<footer style="padding:3rem;border-top:1px solid #F3F4F6;text-align:center;">
+  <p style="font-size:0.6rem;font-weight:700;text-transform:uppercase;letter-spacing:0.15em;color:#D1D5DB;font-family:'Montserrat',sans-serif;">&copy; 2026 MediScan Healthcare Solutions.</p>
+</footer>
+
+{% block extra_js %}
+<script>
+function toggleFaq(idx) {
+  const ans  = document.getElementById('faq-answer-' + idx);
+  const icon = document.getElementById('faq-icon-' + idx);
+  const open = ans.style.display === 'block';
+  ans.style.display  = open ? 'none' : 'block';
+  icon.style.transform = open ? 'rotate(0deg)' : 'rotate(180deg)';
+}
+</script>
+{% endblock %}
+{% endblock %}

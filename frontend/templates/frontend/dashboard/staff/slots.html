@@ -1,0 +1,145 @@
+{% extends "frontend/base_dashboard.html" %}
+{% block title %}Configure Slots – MediScan{% endblock %}
+{% block role_label %}Receptionist{% endblock %}
+{% block page_title %}Configure Slots{% endblock %}
+
+{% block sidebar_nav %}
+<a href="/dashboard/staff/"              class="nav-link"><i data-lucide="building-2" style="width:20px;height:20px;"></i><span class="nav-label">Overview</span></a>
+<a href="/dashboard/staff/register/"     class="nav-link"><i data-lucide="user-plus" style="width:20px;height:20px;"></i><span class="nav-label">Register Patient</span></a>
+<a href="/dashboard/staff/patients/"     class="nav-link"><i data-lucide="users" style="width:20px;height:20px;"></i><span class="nav-label">Patients</span></a>
+<a href="/dashboard/staff/scan/"         class="nav-link"><i data-lucide="scan" style="width:20px;height:20px;"></i><span class="nav-label">Scan Patient Card</span></a>
+<a href="/dashboard/staff/appointments/" class="nav-link"><i data-lucide="calendar" style="width:20px;height:20px;"></i><span class="nav-label">Appointments</span></a>
+<a href="/dashboard/staff/slots/"        class="nav-link" data-exact="true"><i data-lucide="clock" style="width:20px;height:20px;"></i><span class="nav-label">Configure Slots</span></a>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div><div class="page-header-title">Configure Doctor Slots</div><div class="page-header-sub">Manage consultation hours and fees for hospital doctors</div></div>
+</div>
+
+<div class="grid-2">
+  <!-- Add Slot Form -->
+  <div class="card-premium">
+    <h4 style="margin-bottom:1.5rem;display:flex;align-items:center;gap:0.75rem;"><i data-lucide="plus-circle" style="color:var(--color-primary);"></i> Assign New Slot</h4>
+    <form id="add-slot-form" onsubmit="handleAddSlot(event)">
+      <div style="display:flex;flex-direction:column;gap:1.25rem;">
+        <div>
+          <label style="font-size:0.65rem;font-weight:800;text-transform:uppercase;color:#9CA3AF;margin-bottom:0.5rem;display:block;">Select Doctor</label>
+          <select id="doctor-select" name="doctor" class="input-field" required>
+            <option value="">Loading doctors…</option>
+          </select>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
+          <div>
+            <label style="font-size:0.65rem;font-weight:800;text-transform:uppercase;color:#9CA3AF;margin-bottom:0.5rem;display:block;">Start Time</label>
+            <input type="time" name="start_time" class="input-field" required />
+          </div>
+          <div>
+            <label style="font-size:0.65rem;font-weight:800;text-transform:uppercase;color:#9CA3AF;margin-bottom:0.5rem;display:block;">End Time</label>
+            <input type="time" name="end_time" class="input-field" required />
+          </div>
+        </div>
+        <div>
+          <label style="font-size:0.65rem;font-weight:800;text-transform:uppercase;color:#9CA3AF;margin-bottom:0.5rem;display:block;">Consultation Fee (₹)</label>
+          <input type="number" name="consultation_fee" placeholder="e.g. 500" class="input-field" required />
+        </div>
+        <button type="submit" class="btn-primary" style="margin-top:0.5rem;">
+           Generate Slot <i data-lucide="arrow-right" style="width:16px;height:16px;"></i>
+        </button>
+      </div>
+    </form>
+  </div>
+
+  <!-- Current Slots List -->
+  <div class="card-premium">
+    <h4 style="margin-bottom:1.5rem;display:flex;align-items:center;gap:0.75rem;"><i data-lucide="list" style="color:var(--color-primary);"></i> Active Slots</h4>
+    <div id="slots-list-wrap">
+      <div class="empty-state"><p>Checking for active slots…</p></div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  const user = requireAuth(['receptionist']);
+  if (user) {
+    populateTopbar(user);
+    loadDoctors();
+    loadSlots();
+  }
+});
+
+async function loadDoctors() {
+  const sel = document.getElementById('doctor-select');
+  try {
+    const doctors = await Auth.get('/api/hospitals/my-doctors/');
+    sel.innerHTML = '<option value="">Select a doctor…</option>';
+    doctors.forEach(d => {
+      const opt = document.createElement('option');
+      opt.value = d.id;
+      opt.textContent = 'Dr. ' + (d.full_name || d.username);
+      sel.appendChild(opt);
+    });
+  } catch(e) {
+    sel.innerHTML = '<option value="">Failed to load doctors</option>';
+  }
+}
+
+async function loadSlots() {
+  const wrap = document.getElementById('slots-list-wrap');
+  try {
+    const slots = await Auth.get('/api/hospitals/doctor-slots/');
+    if (!slots.length) {
+      wrap.innerHTML = '<div class="empty-state"><div class="empty-state-icon">🕐</div><p>No slots configured. Use the form to assign hours.</p></div>';
+      return;
+    }
+    wrap.innerHTML = slots.map(s => `
+      <div style="background:#F9FAFB; border:1px solid #F3F4F6; border-radius:1rem; padding:1rem; margin-bottom:1rem; display:flex; justify-content:space-between; align-items:center;">
+        <div>
+           <div style="font-size:0.85rem;font-weight:800;color:#111827;">Dr. ${s.doctor_name || 'Doctor'}</div>
+           <div style="font-size:0.7rem;color:#6B7280;margin-top:0.25rem;">
+             <i data-lucide="clock" style="width:12px;height:12px;vertical-align:text-bottom;"></i> ${s.start_time.substring(0,5)} – ${s.end_time.substring(0,5)}
+           </div>
+        </div>
+        <div style="text-align:right;">
+           <div style="font-size:0.9rem;font-weight:900;color:var(--color-primary);">₹${s.consultation_fee}</div>
+           <button onclick="deleteSlot(${s.id})" style="color:#EF4444;font-size:0.65rem;font-weight:800;text-transform:uppercase;margin-top:0.5rem;opacity:0.7;" onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=0.7">Delete</button>
+        </div>
+      </div>
+    `).join('');
+    if(window.lucide) lucide.createIcons();
+  } catch(e) {
+    wrap.innerHTML = '<div class="alert alert-error show">Failed to load slots list.</div>';
+  }
+}
+
+async function handleAddSlot(ev) {
+  ev.preventDefault();
+  const form = ev.target;
+  const data = {};
+  new FormData(form).forEach((v, k) => data[k] = v);
+
+  try {
+    await Auth.post('/api/hospitals/doctor-slots/', data);
+    showToast('Slot assigned successfully!');
+    form.reset();
+    loadSlots();
+  } catch(e) {
+    showToast('Failed to create slot. Check permissions or overlaps.', 'error');
+  }
+}
+
+async function deleteSlot(id) {
+  if (!confirm('Are you sure you want to remove this slot?')) return;
+  try {
+    await Auth.del('/api/hospitals/doctor-slots/' + id + '/');
+    showToast('Slot removed.');
+    loadSlots();
+  } catch(e) {
+    showToast('Failed to delete slot.', 'error');
+  }
+}
+</script>
+{% endblock %}

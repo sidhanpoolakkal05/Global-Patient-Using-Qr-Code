@@ -1,0 +1,110 @@
+{% extends "frontend/base.html" %}
+{% load static %}
+{% block title %}Register – MediScan{% endblock %}
+
+{% block body %}
+<div style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:2.5rem 1rem;background:#F0FDF9;position:relative;">
+
+  <a href="/" style="position:absolute;top:2rem;right:2rem;display:flex;align-items:center;gap:0.5rem;padding:0.625rem 1.5rem;background:white;border:1px solid #A7F3D0;border-radius:1rem;box-shadow:0 8px 24px rgba(0,0,0,0.06);font-size:0.7rem;font-weight:900;text-transform:uppercase;letter-spacing:0.1em;color:#6B7280;font-family:'Montserrat',sans-serif;transition:transform 0.2s;z-index:10;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
+    <i data-lucide="home" style="width:16px;height:16px;"></i> Home
+  </a>
+
+  <div style="max-width:56rem;width:100%;display:flex;overflow:hidden;border-radius:3rem;box-shadow:0 50px 100px -20px rgba(6,78,59,0.15),0 30px 60px -30px rgba(0,0,0,0.2);background:white;border:1px solid #D1FAE5;">
+
+    <!-- Left panel -->
+    <div style="display:none;flex:1;flex-direction:column;align-items:center;justify-content:center;padding:3rem;background:#ECFDF5;border-right:1px solid #D1FAE5;" id="reg-illustration-panel">
+      <div style="text-align:center;margin-bottom:2rem;">
+        <h3 style="font-size:2rem;font-weight:900;font-style:italic;text-transform:uppercase;letter-spacing:-0.04em;color:#065F46;margin-bottom:0.5rem;font-family:'Manrope',sans-serif;">Patient Area</h3>
+        <p style="font-size:0.6rem;font-weight:700;text-transform:uppercase;letter-spacing:0.3em;color:#10B981;font-family:'Montserrat',sans-serif;">Your Personal Health Card</p>
+      </div>
+
+      <!-- Illustration -->
+      <div style="width:14rem;height:14rem;background:linear-gradient(135deg,#0F6E56,#34D399);border-radius:3rem;display:flex;align-items:center;justify-content:center;margin-bottom:2rem;box-shadow:0 20px 40px rgba(15,110,86,0.2);">
+        <i data-lucide="user-check" style="width:7rem;height:7rem;color:white;opacity:0.9;"></i>
+      </div>
+
+      <div style="padding:1.5rem;background:rgba(255,255,255,0.7);backdrop-filter:blur(8px);border-radius:2rem;border:1px solid rgba(255,255,255,0.8);max-width:20rem;text-align:center;box-shadow:0 8px 24px rgba(15,110,86,0.06);">
+        <div style="display:flex;align-items:center;justify-content:center;gap:0.5rem;margin-bottom:0.5rem;color:#065F46;">
+          <i data-lucide="info" style="width:16px;height:16px;"></i>
+          <span style="font-size:0.6rem;font-weight:900;text-transform:uppercase;letter-spacing:0.15em;">Please Note</span>
+        </div>
+        <p style="font-size:0.6rem;font-weight:700;color:#6B7280;text-transform:uppercase;letter-spacing:0.1em;line-height:1.7;font-family:'Montserrat',sans-serif;">
+          Doctors and Receptionists cannot sign up here. Please ask your Hospital Admin to create your staff account.
+        </p>
+      </div>
+    </div>
+
+    <!-- Right: Form -->
+    <div style="flex:1;padding:2.5rem 3.5rem;overflow-y:auto;max-height:95vh;" class="animate-fade-in">
+      <div style="margin-bottom:2.5rem;">
+        <h2 style="font-size:2.25rem;font-weight:900;font-style:italic;text-transform:uppercase;letter-spacing:-0.04em;color:#111827;margin-bottom:0.75rem;font-family:'Manrope',sans-serif;text-decoration:underline;text-decoration-color:rgba(16,185,129,0.15);text-decoration-thickness:4px;text-underline-offset:8px;">
+          Create Your Account
+        </h2>
+        <p style="font-weight:700;color:#9CA3AF;font-size:0.6rem;text-transform:uppercase;letter-spacing:0.4em;font-family:'Montserrat',sans-serif;">Register as a Patient</p>
+      </div>
+
+      <div class="alert alert-error"   id="reg-error"   style="margin-bottom:1.25rem;border-radius:1rem;"></div>
+      <div class="alert alert-success" id="reg-success" style="margin-bottom:1.25rem;border-radius:1rem;"></div>
+
+      <form onsubmit="handleRegister(event)" style="display:flex;flex-direction:column;gap:1.5rem;">
+
+        <!-- Login Details -->
+        <div>
+          <h4 style="font-size:0.6rem;font-weight:900;text-transform:uppercase;letter-spacing:0.15em;color:#9CA3AF;margin-bottom:1rem;font-family:'Montserrat',sans-serif;">Login Details</h4>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:0.75rem;">
+            <input type="text"  name="username" placeholder="Username"      required class="input-field-patient" />
+            <input type="email" name="email"    placeholder="Email Address" required class="input-field-patient" />
+          </div>
+          <input type="password" name="password" placeholder="Password" required class="input-field-patient" />
+        </div>
+
+        <!-- Personal Details -->
+        <div style="border-top:1px solid #F3F4F6;padding-top:1.5rem;">
+          <h4 style="font-size:0.6rem;font-weight:900;text-transform:uppercase;letter-spacing:0.15em;color:#10B981;margin-bottom:1rem;font-family:'Montserrat',sans-serif;">Personal Details</h4>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:0.75rem;">
+            <input type="text" name="full_name" placeholder="Full Name"    required class="input-field-patient" />
+            <input type="tel"  name="phone"     placeholder="Phone Number" required class="input-field-patient" />
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:1rem;">
+            <div>
+              <label style="font-size:0.5rem;font-weight:900;text-transform:uppercase;letter-spacing:0.15em;color:#9CA3AF;display:block;margin-bottom:0.375rem;margin-left:0.25rem;">Age</label>
+              <input type="number" name="age" placeholder="00" required class="input-field-patient" min="1" max="150" />
+            </div>
+            <div>
+              <label style="font-size:0.5rem;font-weight:900;text-transform:uppercase;letter-spacing:0.15em;color:#9CA3AF;display:block;margin-bottom:0.375rem;margin-left:0.25rem;">Gender</label>
+              <select name="gender" class="input-field-patient">
+                <option>Male</option><option>Female</option><option>Other</option>
+              </select>
+            </div>
+            <div>
+              <label style="font-size:0.5rem;font-weight:900;text-transform:uppercase;letter-spacing:0.15em;color:#9CA3AF;display:block;margin-bottom:0.375rem;margin-left:0.25rem;">Blood</label>
+              <select name="blood_group" class="input-field-patient">
+                <option>O+</option><option>O-</option><option>A+</option><option>A-</option>
+                <option>B+</option><option>B-</option><option>AB+</option><option>AB-</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <button type="submit" id="reg-btn" style="padding:1.25rem;background:#064E3B;color:white;border-radius:1.5rem;font-weight:900;font-style:italic;text-transform:uppercase;letter-spacing:-0.03em;font-size:1.1rem;display:flex;align-items:center;justify-content:center;gap:1rem;border:none;cursor:pointer;box-shadow:0 8px 24px rgba(6,78,59,0.25);transition:transform 0.15s,box-shadow 0.15s;font-family:'Manrope',sans-serif;" onmouseover="this.style.transform='scale(1.02)'" onmouseout="this.style.transform='scale(1)'">
+          Create Account <i data-lucide="arrow-right" style="width:1.25rem;height:1.25rem;"></i>
+        </button>
+      </form>
+
+      <div style="margin-top:2rem;text-align:center;font-size:0.6rem;font-weight:900;text-transform:uppercase;letter-spacing:0.15em;color:#9CA3AF;font-family:'Montserrat',sans-serif;">
+        Already have an account? <a href="/login/" style="color:#10B981;font-weight:900;text-decoration:underline;text-underline-offset:4px;margin-left:0.25rem;">Sign In</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% block extra_js %}
+<script>
+  const regPanel = document.getElementById('reg-illustration-panel');
+  if (window.innerWidth >= 768) regPanel.style.display = 'flex';
+  window.addEventListener('resize', () => {
+    regPanel.style.display = window.innerWidth >= 768 ? 'flex' : 'none';
+  });
+</script>
+{% endblock %}
+{% endblock %}

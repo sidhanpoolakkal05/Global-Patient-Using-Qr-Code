@@ -1,0 +1,140 @@
+{% extends "frontend/base.html" %}
+{% load static %}
+{% block title %}MediScan – Smart Healthcare QR System{% endblock %}
+
+{% block body %}
+<!-- ───── Navbar ───── -->
+<nav class="public-nav">
+  <div class="public-nav-inner">
+    <a href="/" class="nav-brand">
+      <div class="nav-brand-icon"><i data-lucide="qr-code" style="width:24px;height:24px;"></i></div>
+      <div><div class="nav-brand-name">Medi<span>Scan</span></div><div class="nav-brand-sub">Health System</div></div>
+    </a>
+    <div class="nav-links">
+      <a href="/modules/">How It Works</a>
+      <a href="/features/">Features</a>
+      <a href="/support/">Help</a>
+    </div>
+    <div style="display:flex;gap:1rem;align-items:center;">
+      <a href="/login/" style="font-size:0.75rem;font-weight:700;color:#6B7280;text-decoration:none;">Login</a>
+      <a href="/register/" class="nav-cta">Get Started</a>
+    </div>
+  </div>
+</nav>
+
+<!-- ───── Hero Section ───── -->
+<section style="padding:12rem 3rem 8rem;background:radial-gradient(circle at top right,rgba(16,185,129,0.08),transparent),radial-gradient(circle at bottom left,rgba(59,130,246,0.05),transparent);">
+  <div class="container" style="display:flex;align-items:center;gap:4rem;">
+    <!-- Hero Text -->
+    <div style="flex:1.2;" class="animate-fade-in-up">
+      <div style="display:inline-flex;align-items:center;gap:0.75rem;padding:0.625rem 1.5rem;border-radius:999px;background:#ECFDF5;border:1px solid #A7F3D0;margin-bottom:2rem;">
+        <span style="display:inline-block;width:8px;height:8px;background:#10B981;border-radius:50%;box-shadow:0 0 12px #10B981;animation:pulse 2s infinite;"></span>
+        <span style="font-size:0.6rem;font-weight:900;text-transform:uppercase;letter-spacing:0.25em;color:#0F6E56;font-family:'Montserrat',sans-serif;">Future of Healthcare</span>
+      </div>
+      <h1 style="font-size:clamp(3.5rem,8vw,6.5rem);font-weight:900;line-height:0.9;font-style:italic;text-transform:uppercase;letter-spacing:-0.05em;color:#111827;margin-bottom:2rem;font-family:'Manrope',sans-serif;">
+        ONE SCAN.<br/><span style="color:var(--color-primary);">ONE RECORD.</span><br/>LIFE SAVED.
+      </h1>
+      <p style="font-size:1.15rem;color:#6B7280;max-width:32rem;line-height:1.7;margin-bottom:3rem;font-family:'Montserrat',sans-serif;">
+        MediScan unifies clinical workflows into a single digital health record accessible via a unique patient QR card. Secure, instant, and universal.
+      </p>
+      <div style="display:flex;gap:1.5rem;align-items:center;">
+        <a href="/register/" class="btn-primary" style="padding:1.25rem 3rem;border-radius:1.25rem;font-size:0.8rem;font-weight:900;text-transform:uppercase;letter-spacing:0.15em;">Create Your Card</a>
+        <a href="/modules/" style="display:flex;align-items:center;gap:0.75rem;font-size:0.75rem;font-weight:900;text-transform:uppercase;letter-spacing:0.15em;color:#111827;text-decoration:none;font-family:'Montserrat',sans-serif;">
+          <div style="width:2.5rem;height:2.5rem;border-radius:50%;border:1px solid #E5E7EB;display:flex;align-items:center;justify-content:center;"><i data-lucide="play" style="width:14px;height:14px;fill:currentColor;"></i></div>
+          How It Works
+        </a>
+      </div>
+    </div>
+
+    <!-- Hero Visual -->
+    <div style="flex:1;position:relative;" class="animate-fade-in-up" style="animation-delay:0.2s;">
+      <div style="position:relative;width:100%;aspect-ratio:1;background:linear-gradient(135deg,#10B981,#059669);border-radius:4rem;box-shadow:0 40px 100px -20px rgba(16,185,129,0.4);display:flex;align-items:center;justify-content:center;transform:rotate(-3deg);">
+        <i data-lucide="qr-code" style="width:50%;height:50%;color:white;opacity:0.95;"></i>
+        
+        <!-- Floating badge 1 -->
+        <div style="position:absolute;top:-2rem;right:-2rem;background:white;padding:1.5rem;border-radius:2.5rem;box-shadow:0 20px 40px rgba(0,0,0,0.1);border:1px solid #F3F4F6;display:flex;items-center;gap:1rem;animation:float 6s ease infinite;">
+          <div style="width:3rem;height:3rem;background:#F5F3FF;border-radius:1rem;display:flex;align-items:center;justify-content:center;color:#7C3AED;">
+             <i data-lucide="shield-check" style="width:20px;height:20px;"></i>
+          </div>
+          <div>
+            <div style="font-size:0.55rem;font-weight:900;color:#9CA3AF;text-transform:uppercase;letter-spacing:0.15em;font-family:'Montserrat',sans-serif;">Security Rating</div>
+            <div style="font-size:1.25rem;font-weight:900;font-style:italic;text-transform:uppercase;color:#111827;font-family:'Manrope',sans-serif;">Bank Grade</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ───── Stats Section ───── -->
+<section style="background:#fff;padding:8rem 3rem;border-top:1px solid #F3F4F6;border-bottom:1px solid #F3F4F6;">
+  <div class="container">
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:3rem;">
+      {% for item in stats %}
+      <div style="text-align:center;" class="animate-fade-in-up" style="animation-delay:{{ forloop.counter0 }}00ms;">
+        <div style="font-size:4rem;font-weight:900;font-style:italic;letter-spacing:-0.05em;color:#111827;margin-bottom:0.5rem;font-family:'Manrope',sans-serif;">{{ item.value }}</div>
+        <div style="font-size:0.65rem;font-weight:900;text-transform:uppercase;letter-spacing:0.3em;color:#10B981;font-family:'Montserrat',sans-serif;">{{ item.label }}</div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+
+<!-- ───── Features Section ───── -->
+<section style="padding:10rem 3rem;background:#F9FAFB;">
+  <div class="container">
+    <div style="text-align:center;margin-bottom:6rem;" class="animate-fade-in-up">
+      <h2 style="font-size:clamp(2.5rem,5vw,4rem);font-weight:900;font-style:italic;text-transform:uppercase;letter-spacing:-0.04em;color:#111827;margin-bottom:1.5rem;font-family:'Manrope',sans-serif;">Intelligent Healthcare</h2>
+      <p style="font-size:1.1rem;color:#6B7280;max-width:32rem;margin:0 auto;line-height:1.7;font-family:'Montserrat',sans-serif;">Everything you need to manage patient care efficiently.</p>
+    </div>
+
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:2.5rem;margin-bottom:6rem;">
+      {% for f in features %}
+      <div class="card-premium animate-fade-in-up" style="padding:3rem;animation-delay:{{ forloop.counter0 }}00ms;">
+        <div style="width:4rem;height:4rem;border-radius:1.5rem;background:{{f.bg}};display:flex;align-items:center;justify-content:center;margin-bottom:2rem;">
+          <i data-lucide="{{f.icon}}" style="width:2rem;height:2rem;color:{{f.color}};"></i>
+        </div>
+        <h3 style="font-size:1.5rem;font-weight:800;color:#111827;margin-bottom:1rem;letter-spacing:-0.03em;font-family:'Manrope',sans-serif;">{{ f.title }}</h3>
+        <p style="font-size:0.95rem;color:#6B7280;line-height:1.8;">{{ f.desc }}</p>
+      </div>
+      {% endfor %}
+    </div>
+
+    <div style="text-align:center;">
+       <a href="/features/" class="btn-secondary" style="padding:1rem 2.5rem;border-radius:1rem;font-size:0.7rem;font-weight:900;text-transform:uppercase;letter-spacing:0.2em;">View All Platform Features</a>
+    </div>
+  </div>
+</section>
+
+<!-- ───── CTA Section ───── -->
+<section style="padding:6rem 3rem;">
+  <div class="container">
+    <div style="background:linear-gradient(135deg,#111827,#064E3B);padding:6rem;border-radius:4rem;text-align:center;position:relative;overflow:hidden;box-shadow:0 60px 120px -20px rgba(6,78,59,0.3);" class="animate-fade-in-up">
+      <div style="position:absolute;top:-10rem;right:-10rem;width:30rem;height:30rem;background:rgba(16,185,129,0.1);border-radius:50%;filter:blur(100px);"></div>
+      <h2 style="font-size:clamp(2.5rem,5vw,4.5rem);font-weight:900;font-style:italic;text-transform:uppercase;letter-spacing:-0.04em;color:white;margin-bottom:1.5rem;font-family:'Manrope',sans-serif;position:relative;z-index:2;">Ready to modernize?</h2>
+      <p style="color:rgba(255,255,255,0.7);font-size:1.1rem;margin-bottom:3rem;max-width:32rem;margin-left:auto;margin-right:auto;position:relative;z-index:2;line-height:1.7;font-family:'Montserrat',sans-serif;">Join 150+ hospitals already using MediScan to transform patient care.</p>
+      <div style="position:relative;z-index:2;">
+        <a href="/register/" class="btn-primary" style="background:#fff;color:#064E3B;padding:1.5rem 4rem;border-radius:1.5rem;font-size:0.85rem;">Get Started Now</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer style="padding:4rem 3rem;border-top:1px solid #F3F4F6;text-align:center;background:#fff;">
+  <p style="font-size:0.65rem;font-weight:800;text-transform:uppercase;letter-spacing:0.25em;color:#D1D5DB;font-family:'Montserrat',sans-serif;">&copy; 2026 MediScan Healthcare Solutions. All Rights Reserved.</p>
+</footer>
+
+{% block extra_js %}
+<script>
+  // Simple intersection observer for counter animation
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        entry.target.classList.add('animate-fade-in-up');
+      }
+    });
+  }, { threshold: 0.1 });
+  document.querySelectorAll('.animate-fade-in-up').forEach(el => observer.observe(el));
+</script>
+{% endblock %}
+{% endblock %}

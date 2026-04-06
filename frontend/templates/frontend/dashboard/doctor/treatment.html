@@ -1,0 +1,351 @@
+{% extends "frontend/base_dashboard.html" %}
+{% block title %}Treatment Desk – MediScan{% endblock %}
+{% block role_label %}Doctor{% endblock %}
+{% block page_title %}Treatment Desk{% endblock %}
+
+{% block sidebar_nav %}
+<a href="/dashboard/doctor/"              class="nav-link"><i data-lucide="stethoscope" style="width:20px;height:20px;"></i><span class="nav-label">Overview</span></a>
+<a href="/dashboard/doctor/appointments/" class="nav-link"><i data-lucide="calendar" style="width:20px;height:20px;"></i><span class="nav-label">Check-ups</span></a>
+<a href="/dashboard/doctor/treatment/"    class="nav-link" data-exact="true"><i data-lucide="heart-pulse" style="width:20px;height:20px;"></i><span class="nav-label">Treatment Desk</span></a>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div><div class="page-header-title">Clinical Desk</div><div class="page-header-sub">High-efficiency patient treatment & e-prescription suite</div></div>
+</div>
+
+<div style="display:grid; grid-template-columns:300px 1fr; gap:1.5rem; align-items:start;">
+  <!-- Compact Sidebar: Patient Directory -->
+  <div class="card-premium" style="padding:1.25rem;">
+    <div style="font-size:0.6rem; font-weight:800; text-transform:uppercase; color:#9CA3AF; margin-bottom:1rem; letter-spacing:0.1em; display:flex; align-items:center; gap:0.5rem;"><i data-lucide="users" style="width:14px;height:14px;"></i> Patient Directory</div>
+    <div class="search-bar" style="margin-bottom:1.25rem; background:#F8FAFC; border-radius:0.75rem; padding:0.625rem 1rem;">
+      <i data-lucide="search" style="width:16px;height:16px;"></i>
+      <input type="text" id="pt-search" placeholder="Search name/UHID…" oninput="searchPatient(this.value)" style="font-size:0.8rem;" />
+    </div>
+    <div id="pt-results" style="max-height:calc(100vh - 280px); overflow-y:auto; padding-right:0.25rem;"></div>
+  </div>
+
+  <!-- Primary Workspace: Treatment Form -->
+  <div class="card-premium" id="treatment-panel" style="padding:1.5rem; min-height:600px;">
+    <div class="empty-state" style="padding:8rem 2rem;"><div class="empty-state-icon">🩺</div><p>Identify a patient from the directory to initiate treatment</p></div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let selectedPatient = null;
+let selectedMeds = [];
+let activeApptId = null;
+
+document.addEventListener('DOMContentLoaded', async () => {
+  const user = requireAuth(['doctor']);
+  if (!user) return;
+  populateTopbar(user);
+
+  const params = new URLSearchParams(window.location.search);
+  activeApptId = params.get('appt');
+  if (activeApptId) {
+    try {
+      const appt = await Auth.get('/api/appointments/' + activeApptId + '/');
+      if (appt.patient) await loadTreatmentForm({ uhid: appt.patient_uhid || appt.patient, full_name: appt.patient_name, gender: appt.patient_gender || '', user: appt.patient });
+    } catch(e) {}
+  }
+});
+
+async function searchPatient(q) {
+  if (!q || q.length < 2) { document.getElementById('pt-results').innerHTML = ''; return; }
+  try {
+    const patients = await Auth.get('/api/patients/?search=' + encodeURIComponent(q));
+    const el = document.getElementById('pt-results');
+    if (!patients.length) { el.innerHTML = '<p style="font-size:0.7rem;color:#9CA3AF;padding:1rem;text-align:center;">No matches.</p>'; return; }
+    el.innerHTML = patients.slice(0,10).map(p => `
+      <div onclick='loadTreatmentForm(${JSON.stringify(p)})' style="padding:0.75rem; border-radius:0.75rem; cursor:pointer; border:1px solid #F3F4F6; margin-bottom:0.625rem; transition:all 0.15s; background:white; display:flex; flex-direction:column; gap:0.25rem;" onmouseover="this.style.borderColor='var(--color-primary)';this.style.background='#F9FAFB'" onmouseout="this.style.borderColor='#F3F4F6';this.style.background='white'">
+        <div style="font-size:0.8rem; font-weight:800; color:#111827;">${p.full_name||p.username}</div>
+        <div style="font-size:0.6rem; color:#9CA3AF; font-weight:700;">#${p.uhid||'N/A'} · ${p.gender||''}</div>
+      </div>`).join('');
+  } catch(e) {}
+}
+
+async function loadTreatmentForm(patient) {
+  selectedPatient = patient;
+  selectedMeds = [];
+
+  // Always reset appointment context for the new patient
+  // (keep URL-provided apptId only if it belongs to this patient)
+  const urlApptId = new URLSearchParams(window.location.search).get('appt');
+  if (!urlApptId) {
+    // Manual search — always clear and re-fetch
+    activeApptId = null;
+  }
+
+  // Auto-find active appointment for this patient
+  if (!activeApptId && patient.user) {
+    try {
+      const appts = await Auth.get('/api/appointments/?patient=' + patient.user + '&status=pending');
+      if (Array.isArray(appts) && appts.length > 0) {
+        activeApptId = appts[0].id;
+      }
+    } catch(e) { console.warn('Could not fetch active appointment:', e); }
+  }
+
+  const apptBadge = activeApptId
+    ? `<div class="badge badge-amber" style="font-size:0.55rem;"><i data-lucide="calendar-clock" style="width:10px;height:10px;"></i> Appt #${activeApptId} will be marked complete</div>`
+    : `<div class="badge badge-gray" style="font-size:0.55rem;">Walk-in / No Appointment</div>`;
+
+  document.getElementById('treatment-panel').innerHTML = `
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem; background:#F8FAFC; padding:1rem 1.25rem; border-radius:1rem; border:1px solid #F1F5F9;">
+      <div style="display:flex; align-items:center; gap:1rem;">
+        <div style="width:40px; height:40px; background:var(--color-primary); color:white; border-radius:50%; display:flex; align-items:center; justify-content:center; font-weight:900; font-size:1.1rem;">${(patient.full_name||'P')[0]}</div>
+        <div>
+          <div style="font-size:1rem; font-weight:900; color:#0F172A; letter-spacing:-0.02em;">${patient.full_name||patient.username}</div>
+          <div style="font-size:0.75rem; color:var(--color-primary); font-weight:900; letter-spacing:1px; background:rgba(15,110,86,0.05); padding:0.2rem 0.6rem; border-radius:0.5rem; display:inline-block; margin-top:0.3rem;">ENC-ID: ${patient.uhid || 'N/A'}</div>
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:flex-end;gap:0.375rem;">
+        <button onclick="toggleHistory()" class="btn-secondary" style="font-size:0.6rem; padding:0.3rem 0.7rem; border-color:var(--color-primary); color:var(--color-primary);">
+          <i data-lucide="history" style="width:12px;height:12px;"></i> View History
+        </button>
+        ${apptBadge}
+      </div>
+    </div>
+
+    <!-- History Section (Hidden by default) -->
+    <div id="history-section" style="display:none; margin-bottom:1.5rem; animation:fadeIn 0.3s ease;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
+        <div style="font-size:0.75rem; font-weight:800; color:#475569; text-transform:uppercase;">Clinical Timeline</div>
+        <button onclick="toggleHistory()" class="btn-secondary" style="font-size:0.6rem; padding:0.2rem 0.5rem;">&times; Close History</button>
+      </div>
+      <div id="history-content-area"></div>
+    </div>
+
+    <div class="alert alert-error"   id="tx-error"   style="margin-bottom:1rem;"></div>
+    <div class="alert alert-success" id="tx-success" style="margin-bottom:1rem;"></div>
+
+    <form onsubmit="saveTreatment(event)" style="display:flex; flex-direction:column; gap:1.25rem;">
+      <div style="display:grid; grid-template-columns:1fr 220px; gap:1rem;">
+        <div>
+          <label style="font-size:0.6rem; font-weight:800; text-transform:uppercase; color:#9CA3AF; margin-bottom:0.4rem; display:block;">Diagnosis & Clinical Notes</label>
+          <textarea name="notes" rows="3" placeholder="Symptoms, observed conditions, and preliminary diagnosis…" class="input-field" style="resize:none; font-size:0.85rem; height:90px; border-radius:0.75rem;" required></textarea>
+        </div>
+        <div>
+          <label style="font-size:0.6rem; font-weight:800; text-transform:uppercase; color:#9CA3AF; margin-bottom:0.4rem; display:block;">Follow-up Date</label>
+          <input type="date" name="followup" class="input-field" style="height:44px; border-radius:0.75rem;" />
+          <p style="font-size:0.55rem; color:#9CA3AF; margin-top:0.5rem; font-weight:600; font-style:italic;">Schedule future check-up if needed</p>
+        </div>
+      </div>
+      
+      <div style="border-top:1px solid #F1F5F9; padding-top:1.25rem;">
+        <label style="font-size:0.6rem; font-weight:800; text-transform:uppercase; color:#9CA3AF; margin-bottom:0.75rem; display:block; display:flex; align-items:center; gap:0.5rem;"><i data-lucide="pill" style="width:14px;height:14px;"></i> Active Prescription Train</label>
+        <div style="position:relative; margin-bottom:1.25rem;">
+          <div class="search-bar" style="border-radius:0.75rem; padding:0.6rem 1rem; background:white; border:1px solid var(--color-primary-light);">
+            <i data-lucide="plus-circle" style="width:18px;height:18px;color:var(--color-primary);"></i>
+            <input type="text" id="med-search" placeholder="Type medicine name to add to train…" oninput="searchMed(this.value)" autocomplete="off" style="font-size:0.85rem;" />
+          </div>
+          <div id="med-results" style="position:absolute; top:100%; left:0; right:0; background:white; border:1px solid #E2E8F0; border-radius:0.75rem; z-index:100; box-shadow:0 12px 32px -4px rgba(0,0,0,0.1); display:none; max-height:220px; overflow-y:auto; margin-top:0.25rem; animation:fadeIn 150ms ease;"></div>
+        </div>
+        <div id="selected-meds-list"></div>
+      </div>
+
+      <div style="display:flex; justify-content:flex-end; border-top:1px solid #F1F5F9; padding-top:1.25rem; margin-top:0.5rem;">
+        <button type="submit" class="btn-primary" style="padding:0.75rem 2rem; border-radius:0.75rem; font-size:0.85rem; font-weight:800;">
+          <i data-lucide="check-circle-2" style="width:18px;height:18px;"></i> Sign & Finalize Prescription
+        </button>
+      </div>
+    </form>`;
+  if(window.lucide) lucide.createIcons();
+  renderMeds();
+}
+
+async function searchMed(q) {
+  const res = document.getElementById('med-results');
+  if (!q || q.length < 1) { res.style.display = 'none'; return; }
+  try {
+    const resp = await Auth.get('/api/hospitals/medicines/?search=' + encodeURIComponent(q));
+    const matches = resp.results || resp;
+    if (!matches.length) {
+      res.innerHTML = '<div style="padding:1.5rem; text-align:center; font-size:0.75rem; color:#9CA3AF;">Drug not found in master catalog.</div>';
+    } else {
+      res.innerHTML = matches.slice(0, 10).map(m => `
+        <div onclick="addMed(${m.id}, '${m.name.replace(/'/g,"\\'")}', '${m.generic_name||''}', '${m.strength||''}', '${m.medicine_type||''}')" 
+             style="padding:0.875rem 1.25rem; border-bottom:1px solid #F8FAFC; cursor:pointer; display:flex; justify-content:space-between; align-items:center;" 
+             onmouseover="this.style.background='#F9FAFB'" onmouseout="this.style.background='white'">
+          <div style="flex:1;">
+            <div style="font-size:0.85rem; font-weight:800; color:#1e293b;">${m.name}</div>
+            <div style="font-size:0.6rem; color:#94a3b8; font-weight:700; text-transform:uppercase;">${m.generic_name||'---'} · ${m.strength||''}</div>
+          </div>
+          <span class="badge badge-gray" style="font-size:0.55rem; padding:0.15rem 0.5rem;">${m.medicine_type||'D'}</span>
+        </div>`).join('');
+    }
+    res.style.display = 'block';
+  } catch(e) { res.style.display = 'none'; }
+}
+
+function addMed(id, name, generic, strength, type) {
+  if (selectedMeds.find(m => m.id === id)) { showToast('Already in prescription.'); return; }
+  selectedMeds.push({ id, name, generic, strength, type, dosage: '1-0-1' });
+  renderMeds();
+  document.getElementById('med-search').value = '';
+  document.getElementById('med-results').style.display = 'none';
+  document.getElementById('med-search').focus();
+}
+
+function removeMed(id) {
+  selectedMeds = selectedMeds.filter(m => m.id !== id);
+  renderMeds();
+}
+
+function updateDosage(id, val) {
+  const med = selectedMeds.find(m => m.id === id);
+  if (med) med.dosage = val;
+}
+
+function renderMeds() {
+  const wrap = document.getElementById('selected-meds-list');
+  if (!selectedMeds.length) {
+    wrap.innerHTML = '<div style="background:#F9FAFB; border:1px dashed #E2E8F0; border-radius:0.75rem; padding:1.5rem; text-align:center;"><p style="font-size:0.7rem; color:#94a3b8; font-weight:700; text-transform:uppercase; letter-spacing:0.04em;">No medications in train</p></div>';
+    return;
+  }
+  wrap.innerHTML = `
+    <div style="width:100%; background:white; border:1px solid #E2E8F0; border-radius:0.75rem; overflow:hidden;">
+      <table style="width:100%; border-collapse:collapse; font-size:0.75rem;">
+        <thead style="background:#F8FAFC; border-bottom:1px solid #E2E8F0;">
+          <tr>
+            <th style="padding:0.6rem 1rem; text-align:left; color:#64748B; font-weight:800; text-transform:uppercase; font-size:0.55rem; letter-spacing:0.08em;">Medicine Details</th>
+            <th style="padding:0.6rem 1rem; text-align:left; color:#64748B; font-weight:800; text-transform:uppercase; font-size:0.55rem; letter-spacing:0.08em;">Dosage Instruction</th>
+            <th style="padding:0.6rem 1rem; width:40px;"></th>
+          </tr>
+        </thead>
+        <tbody>
+          ${selectedMeds.map(m => `
+            <tr style="border-bottom:1px solid #F1F5F9;">
+              <td style="padding:0.75rem 1rem;">
+                <div style="font-weight:800; color:#1e293b; font-size:0.8rem;">${m.name}</div>
+                <div style="font-size:0.55rem; color:#94a3b8; font-weight:800; text-transform:uppercase;">${m.strength || 'N/A'} · ${m.generic || 'GENERIC'}</div>
+              </td>
+              <td style="padding:0.75rem 1rem;">
+                <input type="text" value="${m.dosage}" oninput="updateDosage(${m.id}, this.value)" 
+                       style="width:100%; border:1px solid #E2E8F0; background:#fff; border-radius:0.5rem; padding:0.4rem 0.75rem; font-size:0.75rem; font-weight:800; color:var(--color-primary); outline:none;" 
+                       placeholder="e.g. 1-0-1 after food" />
+              </td>
+              <td style="padding:0.75rem 1rem; text-align:right;">
+                <button type="button" onclick="removeMed(${m.id})" style="color:#ef4444; font-size:1.2rem; font-weight:800; cursor:pointer;" title="Remove Medicine">&times;</button>
+              </td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    </div>`;
+}
+
+async function saveTreatment(e) {
+  e.preventDefault();
+  const form = e.target;
+  const errEl = document.getElementById('tx-error');
+  const sucEl = document.getElementById('tx-success');
+  errEl.classList.remove('show'); sucEl.classList.remove('show');
+  
+  if (!form.notes.value.trim()) { errEl.textContent = 'Please enter diagnosis / clinical notes.'; errEl.classList.add('show'); return; }
+
+  try {
+    const payload = {
+      notes: form.notes.value,
+      diagnosis: 'Confirmed Consultation',
+      medicines: selectedMeds.map(m => ({ id: m.id, dosage: m.dosage })),
+      followup_date: form.followup.value || null,
+      appointment_id: activeApptId
+    };
+    await Auth.post('/api/patients/' + selectedPatient.uhid + '/treatment/', payload);
+    // Show session complete UI
+    const patientName = selectedPatient.full_name || selectedPatient.username;
+    document.getElementById('treatment-panel').innerHTML = `
+      <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;padding:6rem 2rem;text-align:center;">
+        <div style="width:5rem;height:5rem;background:#ECFDF5;border-radius:50%;display:flex;align-items:center;justify-content:center;margin-bottom:1.5rem;">
+          <i data-lucide="check-circle-2" style="width:2.5rem;height:2.5rem;color:#0F6E56;"></i>
+        </div>
+        <h3 style="font-family:var(--font-display);font-size:1.25rem;font-weight:900;color:#111827;letter-spacing:-0.04em;margin-bottom:0.5rem;">Session Complete</h3>
+        <p style="font-size:0.85rem;color:#6B7280;margin-bottom:2rem;">Treatment record for <strong>${patientName}</strong> has been finalized and saved.</p>
+        <button onclick="startNewSession()" class="btn-primary" style="padding:0.75rem 2rem;">
+          <i data-lucide="user-search" style="width:16px;height:16px;"></i> Start New Session
+        </button>
+      </div>`;
+    showToast('Record Finalized ✔');
+    selectedPatient = null;
+    selectedMeds = [];
+    activeApptId = null;
+    document.getElementById('pt-search').value = '';
+    document.getElementById('pt-results').innerHTML = '';
+    if(window.lucide) lucide.createIcons();
+  } catch(err) {
+    const msg = err && err.error ? err.error : (typeof err === 'object' ? Object.values(err).flat().join(' ') : 'System error during save.');
+    errEl.textContent = msg; errEl.classList.add('show');
+  }
+}
+
+function startNewSession() {
+  document.getElementById('treatment-panel').innerHTML = `<div class="empty-state" style="padding:8rem 2rem;"><div class="empty-state-icon">🩺</div><p>Identify a patient from the directory to initiate treatment</p></div>`;
+}
+
+async function toggleHistory() {
+  const sec = document.getElementById('history-section');
+  const form = document.querySelector('form');
+  if (sec.style.display === 'none') {
+    sec.style.display = 'block';
+    form.style.display = 'none';
+    await updateHistoryView();
+  } else {
+    sec.style.display = 'none';
+    form.style.display = 'flex';
+  }
+}
+
+async function updateHistoryView() {
+  const el = document.getElementById('history-content-area');
+  el.innerHTML = '<div style="padding:2rem; text-align:center; color:#94A3B8;">Syncing records…</div>';
+  try {
+    const data = await Auth.get(`/api/patients/treatment-history/?patient_id=${selectedPatient.uhid}`);
+    const bg = data.background;
+    const history = data.history;
+    
+    let html = `
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.75rem; margin-bottom:1.5rem;">
+        <div style="background:#FEF2F2; padding:0.875rem; border-radius:0.75rem; border:1px solid #FEE2E2;">
+          <div style="font-size:0.55rem; font-weight:800; color:#EF4444; text-transform:uppercase; margin-bottom:0.25rem;">Allergies</div>
+          <div style="font-size:0.75rem; font-weight:700; color:#111827;">${bg.allergies}</div>
+        </div>
+        <div style="background:#FFFBEB; padding:0.875rem; border-radius:0.75rem; border:1px solid #FEF3C7;">
+          <div style="font-size:0.55rem; font-weight:800; color:#D97706; text-transform:uppercase; margin-bottom:0.25rem;">Chronic</div>
+          <div style="font-size:0.75rem; font-weight:700; color:#111827;">${bg.chronic}</div>
+        </div>
+      </div>
+    `;
+
+    if (!history.length) {
+      html += '<div style="padding:2rem; text-align:center; color:#94A3B8; background:#F8FAFC; border-radius:1rem;">No prior consultations found.</div>';
+    } else {
+      html += history.map(r => `
+        <div style="position:relative; padding-left:1.5rem; margin-bottom:1.5rem; border-left:2px solid #E2E8F0;">
+          <div style="position:absolute; left:-6px; top:0; width:10px; height:10px; border-radius:50%; background:var(--color-primary); border:2px solid white;"></div>
+          <div style="display:flex; justify-content:space-between;">
+             <div style="font-size:0.6rem; font-weight:800; color:#94A3B8; text-transform:uppercase;">${r.display_date} &bull; ${r.display_time}</div>
+             <div style="font-size:0.6rem; font-weight:800; color:var(--color-primary);">${r.visit_type}</div>
+          </div>
+          <div style="font-size:0.85rem; font-weight:800; color:#111827; margin:0.25rem 0;">${r.diagnosis || 'Consultation'}</div>
+          <div style="font-size:0.7rem; color:#64748B; margin-bottom:0.4rem;">${r.doctor_name} &bull; ${r.hospital_name}</div>
+          <div style="font-size:0.75rem; color:#475569; line-height:1.4;">${r.notes}</div>
+          ${r.medicines.length ? `
+            <div style="display:flex; flex-wrap:wrap; gap:0.4rem; margin-top:0.5rem;">
+              ${r.medicines.map(m => `<span class="badge badge-gray" style="font-size:0.5rem; padding:0.15rem 0.4rem;">${m.name} (${m.dosage})</span>`).join('')}
+            </div>
+          ` : ''}
+        </div>
+      `).join('');
+    }
+    el.innerHTML = html;
+    if(window.lucide) lucide.createIcons();
+  } catch(e) {
+    el.innerHTML = '<div style="padding:2rem; text-align:center; color:#EF4444;">Failed to sync records.</div>';
+  }
+}
+</script>
+{% endblock %}

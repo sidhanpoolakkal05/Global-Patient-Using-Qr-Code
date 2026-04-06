@@ -1,0 +1,105 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{% block title %}Dashboard – MediScan{% endblock %}</title>
+  <meta name="description" content="MediScan HMS Dashboard" />
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏥</text></svg>" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Manrope:wght@500;600;700;800&family=Montserrat:wght@700;800;900&display=swap" rel="stylesheet" />
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+  <link rel="stylesheet" href="{% static 'frontend/css/styles.css' %}" />
+  {% block extra_css %}{% endblock %}
+</head>
+<body>
+
+<div class="dashboard-shell">
+
+  <!-- ═══════════════════ SIDEBAR ═══════════════════ -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-inner">
+
+      <!-- Logo -->
+      <div class="sidebar-logo">
+        <div class="sidebar-logo-icon">
+          <i data-lucide="heart-pulse" style="width:16px;height:16px;"></i>
+        </div>
+        <div class="sidebar-logo-text" id="sidebar-logo-text">
+          <div class="sidebar-logo-name">MediScan</div>
+          <div class="sidebar-logo-sub" id="sidebar-logo-sub">Global System</div>
+        </div>
+      </div>
+
+      <!-- Role label -->
+      <div class="sidebar-section-label" id="sidebar-section-label">{% block role_label %}Dashboard{% endblock %}</div>
+
+      <!-- Nav links -->
+      {% block sidebar_nav %}{% endblock %}
+
+    </div>
+
+    <!-- Footer -->
+    <div class="sidebar-footer">
+      <button class="sidebar-collapse-btn" id="sidebar-collapse-btn">
+        <i data-lucide="chevron-right" id="collapse-icon" style="width:20px;height:20px;"></i>
+        <span class="nav-label" id="collapse-label">Collapse</span>
+      </button>
+    </div>
+  </aside>
+
+  <!-- ═══════════════════ MAIN CONTENT ═══════════════════ -->
+  <main class="main-content">
+
+    <!-- Topbar -->
+    <header class="topbar">
+      <div>
+        <h1 class="topbar-title">{% block page_title %}Overview{% endblock %}</h1>
+      </div>
+      <div class="topbar-user">
+        <div class="topbar-user-info">
+          <div class="topbar-user-details">
+            <div class="topbar-user-name" id="topbar-username">—</div>
+            <div class="topbar-user-role"  id="topbar-role">—</div>
+          </div>
+          <div class="topbar-avatar" id="topbar-avatar">?</div>
+        </div>
+        <button class="logout-btn" onclick="logout()" title="Logout">
+          <i data-lucide="log-out" style="width:20px;height:20px;"></i>
+        </button>
+      </div>
+    </header>
+
+    <!-- Page body -->
+    <div class="page-body">
+      {% block content %}{% endblock %}
+    </div>
+
+  </main>
+</div>
+
+<!-- Toast container -->
+<div class="toast-container" id="toast-container"></div>
+
+<!-- Modal slot -->
+{% block modals %}{% endblock %}
+
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    if (window.lucide) lucide.createIcons();
+  });
+</script>
+<script src="{% static 'frontend/js/auth.js' %}"></script>
+<script src="{% static 'frontend/js/dashboard.js' %}"></script>
+<script>
+  // Auth guard + topbar population
+  document.addEventListener('DOMContentLoaded', () => {
+    const user = requireAuth({{ allowed_roles|default:"[]"|safe }});
+    if (user) populateTopbar(user);
+  });
+</script>
+{% block extra_js %}{% endblock %}
+</body>
+</html>

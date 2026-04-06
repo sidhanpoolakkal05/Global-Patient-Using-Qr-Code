@@ -1,0 +1,407 @@
+{% extends "frontend/base_dashboard.html" %}
+{% block title %}Scan QR Card – MediScan{% endblock %}
+{% block role_label %}Receptionist{% endblock %}
+{% block page_title %}Scan Patient Card{% endblock %}
+
+{% block sidebar_nav %}
+<a href="/dashboard/staff/"              class="nav-link"><i data-lucide="building-2" style="width:20px;height:20px;"></i><span class="nav-label">Overview</span></a>
+<a href="/dashboard/staff/register/"     class="nav-link"><i data-lucide="user-plus" style="width:20px;height:20px;"></i><span class="nav-label">Register Patient</span></a>
+<a href="/dashboard/staff/patients/"     class="nav-link"><i data-lucide="users" style="width:20px;height:20px;"></i><span class="nav-label">Patients</span></a>
+<a href="/dashboard/staff/scan/"         class="nav-link" data-exact="true"><i data-lucide="scan" style="width:20px;height:20px;"></i><span class="nav-label">Scan Patient Card</span></a>
+<a href="/dashboard/staff/appointments/" class="nav-link"><i data-lucide="calendar" style="width:20px;height:20px;"></i><span class="nav-label">Appointments</span></a>
+<a href="/dashboard/staff/slots/"        class="nav-link"><i data-lucide="clock" style="width:20px;height:20px;"></i><span class="nav-label">Configure Slots</span></a>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div><div class="page-header-title">Scan Patient Card</div><div class="page-header-sub">Scan a QR health card or search manually by UHID</div></div>
+</div><div class="card-premium" style="max-width:800px;margin:0 auto;">
+  <!-- QR Scanner area -->
+  <div id="qr-scan-area" style="background:#F9FAFB;border:2px dashed #D1D5DB;border-radius:1.5rem;padding:3rem;text-align:center;position:relative;overflow:hidden;min-height:400px;display:flex;flex-direction:column;align-items:center;justify-content:center;">
+    <div id="scan-instructions-overlay">
+      <div style="width:4rem;height:4rem;background:#ECFDF5;border-radius:1rem;display:flex;align-items:center;justify-content:center;margin:0 auto 1rem;">
+        <i data-lucide="qr-code" style="width:2rem;height:2rem;color:#0F6E56;"></i>
+      </div>
+      <p style="font-size:0.9rem;font-weight:700;color:#111827;margin-bottom:0.5rem;font-family:var(--font-display);">Ready to Scan</p>
+      <p style="font-size:0.8rem;color:#9CA3AF;margin-bottom:1.5rem;">Align the patient's health card QR code within the frame</p>
+    </div>
+    
+    <div id="scanner-container" style="width:100%;max-width:500px;border-radius:1rem;overflow:hidden;box-shadow:var(--shadow-premium);"></div>
+  </div>
+
+  <div class="alert alert-error"   id="scan-error"   style="margin-top:1.5rem;"></div>
+  <div class="alert alert-success" id="scan-success" style="margin-top:1.5rem;"></div>
+
+  <!-- Patient result + Book Appointment -->
+  <div id="patient-result-card" style="display:none;margin-top:2rem;border-top:1px solid #F3F4F6;padding-top:2rem;">
+    <div id="patient-result-body"></div>
+    <div id="slot-section" style="margin-top:1.5rem;display:none;">
+      <h4 style="font-family:var(--font-display);font-size:0.9rem;font-weight:800;color:#111827;margin-bottom:1rem;letter-spacing:-0.03em;">Book Appointment</h4>
+      <div style="display:grid;grid-template-columns:1fr auto;gap:0.75rem;">
+        <select id="slot-select" class="input-field">
+          <option value="">Select a doctor slot…</option>
+        </select>
+        <button onclick="bookAppointment()" class="btn-primary">
+          <i data-lucide="calendar-plus" style="width:16px;height:16px;"></i> Confirm Booking
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Clinical History Modal — must be inside a template block to render -->
+<div id="history-modal" style="position:fixed; inset:0; background:rgba(0,0,0,0.55); z-index:2000; display:none; align-items:flex-start; justify-content:center; backdrop-filter:blur(6px); padding:2rem; overflow-y:auto;">
+  <div class="card-premium" style="width:100%; max-width:580px; display:flex; flex-direction:column; padding:0; overflow:hidden; margin:auto; margin-top:3rem;">
+    <div style="padding:1.25rem 1.5rem; border-bottom:1px solid #F1F5F9; display:flex; justify-content:space-between; align-items:center; background:#F8FAFC;">
+      <div style="display:flex; align-items:center; gap:0.75rem;">
+        <div style="width:2.2rem; height:2.2rem; background:rgba(15,110,86,0.1); color:var(--color-primary); border-radius:0.625rem; display:flex; align-items:center; justify-content:center;">
+          <i data-lucide="history" style="width:1.1rem; height:1.1rem;"></i>
+        </div>
+        <div>
+          <div style="font-weight:900; color:#111827; font-family:var(--font-display); font-size:0.95rem;">Clinical History</div>
+          <div style="font-size:0.6rem; color:#9CA3AF; font-weight:700;">Patient's complete medical timeline</div>
+        </div>
+      </div>
+      <button onclick="document.getElementById('history-modal').style.display='none'" style="background:#F3F4F6; border:none; cursor:pointer; color:#6B7280; width:2rem; height:2rem; border-radius:0.5rem; font-size:1.2rem; display:flex; align-items:center; justify-content:center;">&times;</button>
+    </div>
+    <div style="padding:1.5rem; overflow-y:auto; max-height:calc(80vh - 80px);">
+      <div id="modal-bg-summary"></div>
+      <div id="modal-history-content"></div>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<!-- QR Code Scanner Library -->
+<script src="https://unpkg.com/html5-qrcode"></script>
+<script>
+let foundPatient = null;
+let html5QrCode = null;
+
+document.addEventListener('DOMContentLoaded', () => {
+  const user = requireAuth(['receptionist']);
+  if (user) {
+    populateTopbar(user);
+    // Auto-start scanner
+    setTimeout(startScanner, 500);
+  }
+});
+
+async function lookupUHID(uhidInput) {
+  const uhid = uhidInput;
+  if (!uhid) return;
+  const errEl = document.getElementById('scan-error');
+  const sucEl = document.getElementById('scan-success');
+  errEl.classList.remove('show'); sucEl.classList.remove('show');
+
+  try {
+    const patients = await Auth.get('/api/patients/?uhid=' + encodeURIComponent(uhid));
+    const p = Array.isArray(patients) ? patients[0] : patients;
+    if (!p) { 
+        errEl.textContent = 'No patient found with decoded UHID: ' + uhid; 
+        errEl.classList.add('show'); 
+        // Restart scanner after a short delay if not found
+        setTimeout(startScanner, 2000);
+        return; 
+    }
+    showPatient(p);
+    showToast('Patient record retrieved successfully.');
+  } catch(e) {
+    errEl.textContent = 'Lookup failed. Connection error.'; 
+    errEl.classList.add('show');
+    setTimeout(startScanner, 3000);
+  }
+}
+
+async function showPatient(p) {
+  foundPatient = p;
+  const card = document.getElementById('patient-result-card');
+  const body = document.getElementById('patient-result-body');
+  const scanArea = document.getElementById('qr-scan-area');
+  const slotSec = document.getElementById('slot-section');
+  
+  if (scanArea) scanArea.style.display = 'none';
+
+  // Check for active appointments
+  const pid = p.user_id || p.user;
+  let activeAppt = null;
+  try {
+    const appts = await Auth.get(`/api/appointments/?patient=${pid}&status=pending`);
+    if (appts && appts.length > 0) {
+      activeAppt = appts[0];
+    }
+  } catch(e) { console.error("Active appt check failed", e); }
+
+  body.innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:2rem;">
+        <h4 style="font-family:var(--font-display);font-size:1rem;font-weight:900;color:var(--color-primary);">Patient Found!</h4>
+        <button onclick="resetScanner()" class="btn-secondary" style="font-size:0.65rem;padding:0.375rem 0.75rem;">
+          <i data-lucide="refresh-cw" style="width:12px;height:12px;"></i> Scan Another
+        </button>
+    </div>
+    <div class="qr-card" style="margin-bottom:1.25rem; ${activeAppt ? 'background: linear-gradient(135deg, #0F6E56 0%, #10b981 100%);' : ''}">
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <div>
+          <div style="font-size:0.55rem;font-weight:900;text-transform:uppercase;letter-spacing:0.2em;opacity:0.7;margin-bottom:0.5rem;">MediScan Verified</div>
+          <div style="font-size:1.35rem;font-weight:900;font-style:italic;">${p.full_name||p.username}</div>
+          <div style="font-size:0.75rem;font-weight:900;letter-spacing:1px;background:rgba(255,255,255,0.2);padding:0.25rem 0.6rem;border-radius:0.5rem;display:inline-block;margin-top:0.3rem;">Verified ID: ${p.uhid || 'GENERIC'}</div>
+        </div>
+        <div style="width:3.5rem;height:3.5rem;background:rgba(255,255,255,0.2);border-radius:0.875rem;display:flex;align-items:center;justify-content:center;">
+          <i data-lucide="${activeAppt ? 'calendar-clock' : 'check-circle'}" style="width:2rem;height:2rem;color:rgba(255,255,255,0.9);"></i>
+        </div>
+      </div>
+      <div style="margin-top:1rem;display:flex;gap:0.5rem;flex-wrap:wrap;">
+        ${p.blood_group?`<span style="background:rgba(255,255,255,0.2);padding:0.25rem 0.625rem;border-radius:999px;font-size:0.55rem;font-weight:800;">${p.blood_group}</span>`:''}
+        ${p.age?`<span style="background:rgba(255,255,255,0.2);padding:0.25rem 0.625rem;border-radius:999px;font-size:0.55rem;font-weight:800;">${p.age} yrs</span>`:''}
+        ${p.gender?`<span style="background:rgba(255,255,255,0.2);padding:0.25rem 0.625rem;border-radius:999px;font-size:0.55rem;font-weight:800;">${p.gender}</span>`:''}
+        <button onclick="viewPatientHistory('${p.uhid}')" style="background:white; color:var(--color-primary); padding:0.25rem 0.75rem; border-radius:999px; font-size:0.55rem; font-weight:900; border:none; cursor:pointer; display:flex; align-items:center; gap:0.3rem; margin-left:auto;">
+          <i data-lucide="history" style="width:10px;height:10px;"></i> Clinical History
+        </button>
+      </div>
+    </div>
+    
+    ${activeAppt ? `
+      <div style="padding:1.25rem; background:#FFFBEB; border:1px solid #FEF3C7; border-radius:1rem; margin-top:1rem;">
+        <div style="display:flex; align-items:center; gap:0.75rem; margin-bottom:0.75rem;">
+          <div style="width:2.5rem; height:2.5rem; background:#FEF3C7; border-radius:0.75rem; display:flex; align-items:center; justify-content:center;">
+            <i data-lucide="alert-circle" style="width:1.25rem; height:1.25rem; color:#D97706;"></i>
+          </div>
+          <div>
+            <div style="font-size:0.85rem; font-weight:800; color:#92400E;">Active Appointment Found</div>
+            <div style="font-size:0.7rem; color:#B45309; font-weight:600;">Patient already has a pending visit scheduled.</div>
+          </div>
+        </div>
+        <div id="active-appt-edit-section" style="background:white; padding:1.25rem; border-radius:0.75rem; border:1px solid #FEF3C7; display:flex; flex-direction:column; gap:1rem;">
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem;">
+            <div>
+              <div style="font-size:0.6rem; text-transform:uppercase; color:#9CA3AF; font-weight:800; margin-bottom:0.25rem;">Current Doctor</div>
+              <div style="font-size:0.8rem; font-weight:700; color:#111827;">Dr. ${activeAppt.doctor_name || 'Assigned'}</div>
+            </div>
+            <div>
+              <div style="font-size:0.6rem; text-transform:uppercase; color:#9CA3AF; font-weight:800; margin-bottom:0.25rem;">Current Slot</div>
+              <div style="font-size:0.8rem; font-weight:700; color:#111827;">${activeAppt.slot_time || activeAppt.appointment_time || '---'}</div>
+            </div>
+          </div>
+          <div style="border-top:1px dashed #E2E8F0; padding-top:1rem;">
+             <label style="font-size:0.65rem; font-weight:800; color:#4B5563; margin-bottom:0.5rem; display:block;">CHANGE SLOT (EDIT):</label>
+             <div style="display:grid; grid-template-columns:1fr auto; gap:0.5rem;">
+               <select id="edit-slot-select" class="input-field" style="font-size:0.8rem; height:38px;">
+                 <option value="">Select new slot list…</option>
+               </select>
+               <button onclick="updateAppointment(${activeAppt.id})" class="btn-primary" style="background:#D97706; padding:0.5rem 1rem; font-size:0.75rem;">
+                 <i data-lucide="save" style="width:14px;height:14px;"></i> Update
+               </button>
+               <button onclick="deleteAppointment(${activeAppt.id})" class="btn-secondary" style="padding:0.5rem 1rem; font-size:0.75rem; color:#EF4444; border-color:#FEE2E2;">
+                 <i data-lucide="trash-2" style="width:14px;height:14px;"></i> Delete
+               </button>
+             </div>
+          </div>
+        </div>
+        <a href="/dashboard/staff/appointments/" class="btn-secondary" style="width:100%; margin-top:1rem; justify-content:center; border-color:#FEF3C7; color:#B45309;">
+          <i data-lucide="list" style="width:14px;height:14px;"></i> View All Appointments
+        </a>
+      </div>
+    ` : ''}
+
+    ${p.medical_history && !activeAppt ? `<div style="padding:0.875rem;background:#F9FAFB;border-radius:0.75rem;font-size:0.75rem;color:#374151;"><strong>Medical History:</strong> ${p.medical_history}</div>` : ''}`;
+    
+  card.style.display = 'block';
+  
+  if (!activeAppt) {
+    loadSlots('slot-select');
+  } else {
+    slotSec.style.display = 'none';
+    loadSlots('edit-slot-select');
+  }
+  
+  if(window.lucide) lucide.createIcons();
+}
+
+function resetScanner() {
+  document.getElementById('patient-result-card').style.display = 'none';
+  document.getElementById('qr-scan-area').style.display = 'flex';
+  document.getElementById('scan-success').classList.remove('show');
+  startScanner();
+}
+
+async function loadSlots(selectId = 'slot-select') {
+  const slotSec = document.getElementById('slot-section');
+  const sel     = document.getElementById(selectId);
+  if (!sel) return;
+  try {
+    const slots = await Auth.get('/api/hospitals/doctor-slots/');
+    sel.innerHTML = '<option value="">Select a doctor slot…</option>';
+    slots.forEach(s => {
+      const opt = document.createElement('option');
+      opt.value = JSON.stringify(s); // Store the whole slot object
+      opt.textContent = (s.doctor_name||'Doctor') + ' (' + (s.hospital_name||'Hosp') + ') · ' + s.start_time.substring(0,5);
+      sel.appendChild(opt);
+    });
+    if (selectId === 'slot-select') slotSec.style.display = 'block';
+  } catch(e) {}
+}
+
+async function updateAppointment(apptId) {
+  const slotData = document.getElementById('edit-slot-select').value;
+  if (!slotData) { showToast('Select a new slot first.', 'error'); return; }
+  
+  try {
+    const s = JSON.parse(slotData);
+    const payload = {
+        doctor: s.doctor,
+        hospital: s.hospital,
+        time_slot: s.start_time,
+        appointment_time: s.start_time,
+        consultation_fee: s.consultation_fee
+    };
+    await Auth.patch(`/api/appointments/${apptId}/`, payload);
+    showToast('Appointment updated successfully!');
+    document.getElementById('scan-success').textContent = 'Appointment updated for ' + (foundPatient.full_name||foundPatient.username);
+    document.getElementById('scan-success').classList.add('show');
+    document.getElementById('patient-result-card').style.display = 'none';
+    setTimeout(resetScanner, 3000);
+  } catch(e) { 
+    showToast('Failed to update. ' + (e.error || ''), 'error'); 
+  }
+}
+
+async function deleteAppointment(apptId) {
+  if (!confirm('Are you sure you want to permanently delete this appointment?')) return;
+  try {
+    await Auth.del('/api/appointments/' + apptId + '/');
+    showToast('Appointment deleted successfully.');
+    document.getElementById('scan-success').textContent = 'Appointment deleted.';
+    document.getElementById('scan-success').classList.add('show');
+    document.getElementById('patient-result-card').style.display = 'none';
+    setTimeout(resetScanner, 2000);
+  } catch(e) {}
+}
+
+async function viewPatientHistory(pid) {
+  const modal = document.getElementById('history-modal');
+  const content = document.getElementById('modal-history-content');
+  modal.style.display = 'flex';
+  content.innerHTML = '<div style="padding:4rem; text-align:center; color:#94A3B8;"><div class="spinner" style="margin:0 auto 1rem;"></div>Syncing clinical records…</div>';
+  
+  try {
+    // We need a way to fetch history for a specific patient ID if we are staff
+    // The current endpoint /treatment-history/ is for self. 
+    // Updating URL to accept patient_id
+    const data = await Auth.get(`/api/patients/treatment-history/?patient_id=${pid}`);
+    renderModalBackground(data.background);
+    renderModalHistory(data.history);
+  } catch(e) {
+    content.innerHTML = '<div style="padding:4rem; text-align:center; color:#EF4444;">Access denied or patient history not found.</div>';
+  }
+}
+
+function renderModalBackground(bg) {
+  const el = document.getElementById('modal-bg-summary');
+  if (!bg) { el.innerHTML = ''; return; }
+  el.innerHTML = `
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.75rem; margin-bottom:1.5rem;">
+      <div style="background:#FEF2F2; padding:0.875rem; border-radius:0.75rem; border:1px solid #FEE2E2;">
+        <div style="font-size:0.55rem; font-weight:800; color:#EF4444; text-transform:uppercase; margin-bottom:0.25rem;">Allergies</div>
+        <div style="font-size:0.75rem; font-weight:700; color:#111827;">${bg.allergies}</div>
+      </div>
+      <div style="background:#FFFBEB; padding:0.875rem; border-radius:0.75rem; border:1px solid #FEF3C7;">
+        <div style="font-size:0.55rem; font-weight:800; color:#D97706; text-transform:uppercase; margin-bottom:0.25rem;">Chronic</div>
+        <div style="font-size:0.75rem; font-weight:700; color:#111827;">${bg.chronic}</div>
+      </div>
+    </div>
+  `;
+}
+
+function renderModalHistory(records) {
+  const el = document.getElementById('modal-history-content');
+  if (!records || !records.length) {
+    el.innerHTML = '<div style="padding:4rem; text-align:center; color:#94A3B8;">No medical records found for this patient.</div>';
+    return;
+  }
+  el.innerHTML = records.map(r => `
+    <div style="position:relative; padding-left:1.5rem; margin-bottom:2rem; border-left:2px solid #E2E8F0;">
+      <div style="position:absolute; left:-6px; top:0; width:10px; height:10px; border-radius:50%; background:var(--color-primary); border:2px solid white;"></div>
+      <div style="font-size:0.6rem; font-weight:800; color:#94A3B8; text-transform:uppercase; margin-bottom:0.25rem;">${r.display_date}</div>
+      <div style="font-size:0.85rem; font-weight:800; color:#111827;">${r.diagnosis || 'Consultation'}</div>
+      <div style="font-size:0.7rem; color:#64748B; margin-bottom:0.5rem;">${r.doctor_name} &bull; ${r.hospital_name}</div>
+      <div style="font-size:0.75rem; color:#475569; background:#F8FAFC; padding:0.6rem; border-radius:0.5rem; line-height:1.4;">${r.notes}</div>
+      ${r.medicines.length ? `
+        <div style="display:flex; flex-wrap:wrap; gap:0.4rem; margin-top:0.5rem;">
+          ${r.medicines.map(m => `<span class="badge badge-gray" style="font-size:0.5rem; padding:0.15rem 0.4rem;">${m.name} (${m.dosage})</span>`).join('')}
+        </div>
+      ` : ''}
+    </div>
+  `).join('');
+  if(window.lucide) lucide.createIcons();
+}
+
+async function bookAppointment() {
+  const slotData = document.getElementById('slot-select').value;
+  if (!slotData || !foundPatient) { showToast('Select a slot first.', 'error'); return; }
+  
+  try {
+    const s = JSON.parse(slotData);
+    const today = new Date().toISOString().slice(0,10);
+    const payload = {
+        patient: foundPatient.user_id || foundPatient.user, // Use user ID linked to patient record
+        doctor: s.doctor,
+        hospital: s.hospital,
+        appointment_date: today,
+        time_slot: s.start_time, // Explicitly provide required time_slot
+        appointment_time: s.start_time,
+        consultation_fee: s.consultation_fee,
+        appointment_mode: 'offline'
+    };
+    await Auth.post('/api/appointments/', payload);
+    showToast('Appointment booked successfully!');
+    document.getElementById('scan-success').textContent = 'Appointment booked for ' + (foundPatient.full_name||foundPatient.username) + ' with Dr. ' + s.doctor_name;
+    document.getElementById('scan-success').classList.add('show');
+    document.getElementById('patient-result-card').style.display = 'none';
+    setTimeout(resetScanner, 3000);
+  } catch(e) { 
+    showToast('Failed to book. ' + (e.error || ''), 'error'); 
+  }
+}
+
+async function startScanner() {
+  if (html5QrCode) return;
+  
+  const container = document.getElementById('scanner-container');
+  const overlay   = document.getElementById('scan-instructions-overlay');
+  
+  html5QrCode = new Html5Qrcode("scanner-container");
+
+  try {
+    await html5QrCode.start(
+      { facingMode: "environment" },
+      { fps: 10, qrbox: { width: 250, height: 250 } },
+      (decodedText) => {
+        // Success
+        lookupUHID(decodedText);
+        stopScanner();
+      },
+      (errorMessage) => {
+        // quiet
+      }
+    );
+    overlay.style.display = 'none';
+  } catch (err) {
+    showToast('Camera access denied. Please enable camera permissions.', 'error');
+    overlay.style.display = 'block';
+  }
+}
+
+function stopScanner() {
+  if (html5QrCode) {
+    html5QrCode.stop().then(() => {
+      html5QrCode = null;
+    }).catch(err => {
+      console.error(err);
+      html5QrCode = null;
+    });
+  }
+}
+</script>
+{% endblock %}

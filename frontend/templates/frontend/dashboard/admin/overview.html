@@ -1,0 +1,95 @@
+{% extends "frontend/base_dashboard.html" %}
+{% block title %}Admin Overview – MediScan{% endblock %}
+{% block role_label %}Global Admin{% endblock %}
+{% block page_title %}Overview{% endblock %}
+
+{% block sidebar_nav %}
+<a href="/dashboard/admin/"            class="nav-link" data-exact="true"><i data-lucide="layout-dashboard" style="width:20px;height:20px;"></i><span class="nav-label">Overview</span></a>
+<a href="/dashboard/admin/hospitals/"  class="nav-link"><i data-lucide="building-2" style="width:20px;height:20px;"></i><span class="nav-label">Hospitals Registry</span></a>
+<a href="/dashboard/admin/medicines/"  class="nav-link"><i data-lucide="pill" style="width:20px;height:20px;"></i><span class="nav-label">Medicine Master</span></a>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div><div class="page-header-title">System Overview</div><div class="page-header-sub">Global administrator control panel</div></div>
+</div>
+
+<!-- Stats row -->
+<div class="grid-4" style="margin-bottom:2rem;" id="stats-row">
+  <div class="stat-card">
+    <div class="stat-card__icon" style="background:#ECFDF5;"><i data-lucide="building-2" style="width:24px;height:24px;color:#0F6E56;"></i></div>
+    <div class="stat-card__label">Total Hospitals</div>
+    <div class="stat-card__value" id="stat-hospitals">—</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-card__icon" style="background:#EFF6FF;"><i data-lucide="users" style="width:24px;height:24px;color:#2563EB;"></i></div>
+    <div class="stat-card__label">Total Users</div>
+    <div class="stat-card__value" id="stat-users">—</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-card__icon" style="background:#FEF3C7;"><i data-lucide="pill" style="width:24px;height:24px;color:#D97706;"></i></div>
+    <div class="stat-card__label">Medicines</div>
+    <div class="stat-card__value" id="stat-medicines">—</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-card__icon" style="background:#FEF2F2;"><i data-lucide="activity" style="width:24px;height:24px;color:#DC2626;"></i></div>
+    <div class="stat-card__label">Daily Scans</div>
+    <div class="stat-card__value">4,200+</div>
+  </div>
+</div>
+
+<!-- Hospitals quick list -->
+<div class="card-premium">
+  <div class="page-header" style="margin-bottom:1.5rem;">
+    <div class="page-header-title" style="font-size:1.1rem;">Registered Hospitals</div>
+    <a href="/dashboard/admin/hospitals/" class="btn-secondary" style="padding:0.5rem 1.25rem;font-size:0.75rem;">View All</a>
+  </div>
+  <div id="hospitals-table-wrap">
+    <div class="empty-state"><div class="empty-state-icon">🏥</div><p>Loading hospitals…</p></div>
+  </div>
+</div>
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', async () => {
+  const user = requireAuth(['admin']);
+  if (!user) return;
+  populateTopbar(user);
+
+  try {
+    // Fetch dashboard stats
+    const stats = await Auth.get('/api/auth/dashboard-stats/');
+    if (stats && typeof stats === 'object') {
+      document.getElementById('stat-hospitals').textContent = stats.total_hospitals != null ? stats.total_hospitals : '0';
+      document.getElementById('stat-users').textContent = stats.total_users != null ? stats.total_users : '0';
+      document.getElementById('stat-medicines').textContent = stats.total_medicines != null ? stats.total_medicines : '0';
+    }
+  } catch(e) {
+    console.warn('Could not load dashboard stats', e);
+  }
+
+  try {
+    const hospitals = await Auth.get('/api/hospitals/');
+    const wrap = document.getElementById('hospitals-table-wrap');
+
+    if (!hospitals || !hospitals.length) {
+      wrap.innerHTML = '<div class="empty-state"><div class="empty-state-icon">🏥</div><p>No hospitals registered yet.</p></div>';
+      return;
+    }
+
+    wrap.innerHTML = `<table class="data-table">
+      <thead><tr><th>Name</th><th>Address</th><th>Phone</th><th>Status</th></tr></thead>
+      <tbody>${hospitals.slice(0,8).map(h => `<tr>
+        <td><strong style="color:#111827;">${h.name}</strong></td>
+        <td style="color:#6B7280;">${h.address || '—'}</td>
+        <td>${h.phone || '—'}</td>
+        <td><span class="badge badge-green">Active</span></td>
+      </tr>`).join('')}</tbody>
+    </table>`;
+  } catch(e) {
+    document.getElementById('hospitals-table-wrap').innerHTML = '<div class="empty-state"><div class="empty-state-icon">⚠️</div><p>Could not load data.</p></div>';
+  }
+});
+</script>
+{% endblock %}
+{% endblock %}

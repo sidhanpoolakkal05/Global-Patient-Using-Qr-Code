@@ -1,0 +1,133 @@
+{% extends "frontend/base_dashboard.html" %}
+{% block title %}Register Patient – MediScan{% endblock %}
+{% block role_label %}Receptionist{% endblock %}
+{% block page_title %}Register Patient{% endblock %}
+
+{% block sidebar_nav %}
+<a href="/dashboard/staff/"              class="nav-link"><i data-lucide="building-2" style="width:20px;height:20px;"></i><span class="nav-label">Overview</span></a>
+<a href="/dashboard/staff/register/"     class="nav-link" data-exact="true"><i data-lucide="user-plus" style="width:20px;height:20px;"></i><span class="nav-label">Register Patient</span></a>
+<a href="/dashboard/staff/patients/"     class="nav-link"><i data-lucide="users" style="width:20px;height:20px;"></i><span class="nav-label">Patients</span></a>
+<a href="/dashboard/staff/scan/"         class="nav-link"><i data-lucide="scan" style="width:20px;height:20px;"></i><span class="nav-label">Scan Patient Card</span></a>
+<a href="/dashboard/staff/appointments/" class="nav-link"><i data-lucide="calendar" style="width:20px;height:20px;"></i><span class="nav-label">Appointments</span></a>
+<a href="/dashboard/staff/slots/"        class="nav-link"><i data-lucide="clock" style="width:20px;height:20px;"></i><span class="nav-label">Configure Slots</span></a>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div><div class="page-header-title">Register Patient</div><div class="page-header-sub">Create a new patient account with QR health card</div></div>
+</div>
+
+<div class="grid-2">
+  <div class="card-premium">
+    <div class="alert alert-error"   id="reg-error"   style="margin-bottom:1rem;"></div>
+    <div class="alert alert-success" id="reg-success" style="margin-bottom:1rem;"></div>
+    <form onsubmit="registerPatient(event)" style="display:flex;flex-direction:column;gap:1rem;" id="reg-form">
+      <h4 style="font-size:0.7rem;font-weight:900;text-transform:uppercase;letter-spacing:0.15em;color:#9CA3AF;font-family:'Montserrat',sans-serif;">Account Details</h4>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
+        <input type="text"  name="username" placeholder="Username *" required class="input-field" />
+        <input type="email" name="email"    placeholder="Email *"    required class="input-field" />
+      </div>
+      <input type="password" name="password" placeholder="Password *" required class="input-field" />
+
+      <h4 style="font-size:0.7rem;font-weight:900;text-transform:uppercase;letter-spacing:0.15em;color:#9CA3AF;font-family:'Montserrat',sans-serif;margin-top:0.5rem;border-top:1px solid #F3F4F6;padding-top:1rem;">Personal Details</h4>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
+        <input type="text" name="full_name" placeholder="Full Name *" required class="input-field" />
+        <input type="tel"  name="phone"     placeholder="Phone *"     required class="input-field" />
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:1rem;">
+        <div>
+          <label style="font-size:0.6rem;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:#9CA3AF;display:block;margin-bottom:0.3rem;">Age</label>
+          <input type="number" name="age" required class="input-field" min="1" max="150" />
+        </div>
+        <div>
+          <label style="font-size:0.6rem;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:#9CA3AF;display:block;margin-bottom:0.3rem;">Gender</label>
+          <select name="gender" class="input-field"><option>Male</option><option>Female</option><option>Other</option></select>
+        </div>
+        <div>
+          <label style="font-size:0.6rem;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:#9CA3AF;display:block;margin-bottom:0.3rem;">Blood</label>
+          <select name="blood_group" class="input-field">
+            <option>O+</option><option>O-</option><option>A+</option><option>A-</option>
+            <option>B+</option><option>B-</option><option>AB+</option><option>AB-</option>
+          </select>
+        </div>
+      </div>
+
+      <h4 style="font-size:0.7rem;font-weight:900;text-transform:uppercase;letter-spacing:0.15em;color:#9CA3AF;font-family:'Montserrat',sans-serif;margin-top:0.5rem;border-top:1px solid #F3F4F6;padding-top:1rem;">Medical Info</h4>
+      <textarea name="medical_history" placeholder="Known conditions, allergies, previous treatments…" rows="3" class="input-field" style="resize:vertical;"></textarea>
+
+      <button type="submit" id="reg-btn" class="btn-primary" style="margin-top:0.5rem;padding:1rem;">
+        <i data-lucide="user-plus" style="width:16px;height:16px;"></i> Register Patient
+      </button>
+    </form>
+  </div>
+
+  <div>
+    <div class="card-premium" style="margin-bottom:1.5rem;">
+      <div style="text-align:center;padding:1.5rem 1rem;">
+        <div style="width:5rem;height:5rem;background:#ECFDF5;border-radius:1.5rem;display:flex;align-items:center;justify-content:center;margin:0 auto 1rem;">
+          <i data-lucide="qr-code" style="width:2.5rem;height:2.5rem;color:#0F6E56;"></i>
+        </div>
+        <div style="font-weight:800;font-size:1rem;color:#111827;margin-bottom:0.5rem;font-family:var(--font-display);">QR Card Generated</div>
+        <p style="font-size:0.8rem;color:#6B7280;">After registration, a unique QR health card is automatically generated for the patient.</p>
+      </div>
+    </div>
+    <div class="card-premium">
+      <h4 style="font-family:var(--font-display);font-size:0.9rem;font-weight:800;color:#111827;margin-bottom:1rem;letter-spacing:-0.03em;">Tips</h4>
+      <ul style="display:flex;flex-direction:column;gap:0.75rem;">
+        {% for tip in tips %}
+        <li style="display:flex;align-items:flex-start;gap:0.75rem;font-size:0.8rem;color:#6B7280;">
+          <i data-lucide="check-circle" style="width:16px;height:16px;color:#0F6E56;flex-shrink:0;margin-top:0.1rem;"></i>
+          {{ tip }}
+        </li>
+        {% endfor %}
+      </ul>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  const user = requireAuth(['receptionist']);
+  if (user) populateTopbar(user);
+});
+
+async function registerPatient(e) {
+  e.preventDefault();
+  const form  = e.target;
+  const errEl = document.getElementById('reg-error');
+  const sucEl = document.getElementById('reg-success');
+  const btn   = document.getElementById('reg-btn');
+  errEl.classList.remove('show'); sucEl.classList.remove('show');
+  btn.textContent = 'Registering…'; btn.disabled = true;
+
+  try {
+    const res = await Auth.post('/api/auth/register/', {
+      username: form.username.value, email: form.email.value, password: form.password.value,
+      full_name: form.full_name.value, phone: form.phone.value, age: form.age.value,
+      gender: form.gender.value, blood_group: form.blood_group.value,
+      medical_history: form.medical_history.value, role: 'patient',
+    });
+    
+    const uhid = res.uhid || (res.patient_profile ? res.patient_profile.uhid : 'GENERA-TED');
+    sucEl.innerHTML = `
+      <div style="font-weight:900;margin-bottom:0.5rem;">Registration Successful!</div>
+      <div style="font-size:0.7rem;background:rgba(255,255,255,0.2);padding:0.75rem;border-radius:0.75rem;">
+        Patient UHID: <strong style="color:white;letter-spacing:1px;">${uhid}</strong>
+      </div>
+      <p style="margin-top:0.5rem;font-size:0.65rem;">QR Health Card has been generated and sent to ${form.email.value}.</p>
+    `;
+    sucEl.classList.add('show');
+    form.reset();
+    showToast('Patient Registered: ' + uhid);
+  } catch(err) {
+    const msg = typeof err === 'object' ? Object.values(err).flat().join(' | ') : 'Registration failed.';
+    errEl.textContent = msg; errEl.classList.add('show');
+  }
+  btn.innerHTML = '<i data-lucide="user-plus" style="width:16px;height:16px;"></i> Register Patient';
+  btn.disabled  = false;
+  if(window.lucide) lucide.createIcons();
+}
+</script>
+{% endblock %}

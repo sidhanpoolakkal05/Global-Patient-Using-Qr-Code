@@ -1,0 +1,59 @@
+{% extends "frontend/base.html" %}
+{% load static %}
+{% block title %}Features – MediScan{% endblock %}
+
+{% block body %}
+<!-- Navbar -->
+<nav class="public-nav">
+  <div class="public-nav-inner">
+    <a href="/" class="nav-brand">
+      <div class="nav-brand-icon"><i data-lucide="qr-code" style="width:24px;height:24px;"></i></div>
+      <div><div class="nav-brand-name">Medi<span>Scan</span></div><div class="nav-brand-sub">Health System</div></div>
+    </a>
+    <div class="nav-links">
+      <a href="/modules/">How It Works</a>
+      <a href="/features/" style="color:var(--color-primary);">Features</a>
+      <a href="/support/">Help</a>
+    </div>
+    <a href="/dashboard/" class="nav-cta">Dashboard</a>
+  </div>
+</nav>
+
+<div style="padding-top:10rem;">
+  <div class="container">
+    <!-- Header -->
+    <div style="text-align:center;margin-bottom:5rem;" class="animate-fade-in-up">
+      <div style="display:inline-flex;align-items:center;gap:0.75rem;padding:0.625rem 1.5rem;border-radius:999px;background:#ECFDF5;border:1px solid #A7F3D0;margin-bottom:1.5rem;">
+        <i data-lucide="sparkles" style="width:16px;height:16px;color:#0F6E56;"></i>
+        <span style="font-size:0.6rem;font-weight:900;text-transform:uppercase;letter-spacing:0.2em;color:#065F46;font-family:'Montserrat',sans-serif;">Platform Features</span>
+      </div>
+      <h1 style="font-size:clamp(3rem,6vw,5rem);font-weight:900;font-style:italic;text-transform:uppercase;letter-spacing:-0.05em;color:#111827;margin-bottom:1.5rem;font-family:'Manrope',sans-serif;">Everything You Need</h1>
+      <p style="font-size:1.1rem;color:#6B7280;max-width:36rem;margin:0 auto;line-height:1.7;font-family:'Montserrat',sans-serif;">A comprehensive healthcare management platform built for modern hospitals.</p>
+    </div>
+
+    <!-- Feature grid -->
+    <div class="grid-3" style="margin-bottom:5rem;">
+      {% for feature in features %}
+      <div class="card-premium animate-fade-in-up" style="animation-delay:{{ forloop.counter0 }}00ms;">
+        <div style="width:3.5rem;height:3.5rem;border-radius:1.25rem;background:{{ feature.bg }};display:flex;align-items:center;justify-content:center;margin-bottom:1.5rem;">
+          <i data-lucide="{{ feature.icon }}" style="width:1.5rem;height:1.5rem;color:{{ feature.color }};"></i>
+        </div>
+        <h3 style="font-size:1.1rem;font-weight:800;color:#111827;margin-bottom:0.75rem;letter-spacing:-0.03em;font-family:'Manrope',sans-serif;">{{ feature.title }}</h3>
+        <p style="font-size:0.85rem;color:#6B7280;line-height:1.7;">{{ feature.desc }}</p>
+      </div>
+      {% endfor %}
+    </div>
+
+    <!-- CTA -->
+    <div style="text-align:center;padding:5rem;background:linear-gradient(135deg,#ECFDF5,#D1FAE5);border-radius:3rem;margin-bottom:5rem;">
+      <h2 style="font-size:2.5rem;font-weight:900;font-style:italic;text-transform:uppercase;letter-spacing:-0.04em;color:#065F46;margin-bottom:1rem;font-family:'Manrope',sans-serif;">Start Today</h2>
+      <p style="color:#6B7280;margin-bottom:2rem;font-family:'Montserrat',sans-serif;">Join thousands of healthcare professionals using MediScan.</p>
+      <a href="/register/" class="btn-primary" style="padding:1rem 2.5rem;border-radius:1rem;font-size:0.7rem;font-weight:900;text-transform:uppercase;letter-spacing:0.15em;">Register Now</a>
+    </div>
+  </div>
+</div>
+
+<footer style="padding:3rem;border-top:1px solid #F3F4F6;text-align:center;">
+  <p style="font-size:0.6rem;font-weight:700;text-transform:uppercase;letter-spacing:0.15em;color:#D1D5DB;font-family:'Montserrat',sans-serif;">&copy; 2026 MediScan Healthcare Solutions.</p>
+</footer>
+{% endblock %}

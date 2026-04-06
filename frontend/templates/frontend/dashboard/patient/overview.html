@@ -1,0 +1,203 @@
+{% extends "frontend/base_dashboard.html" %}
+{% block title %}Health Card – MediScan{% endblock %}
+{% block role_label %}Patient{% endblock %}
+{% block page_title %}Health Card{% endblock %}
+
+{% block sidebar_nav %}
+<a href="/dashboard/patient/"         class="nav-link" data-exact="true"><i data-lucide="scan" style="width:20px;height:20px;"></i><span class="nav-label">Health Card</span></a>
+<a href="/dashboard/patient/book/"    class="nav-link"><i data-lucide="calendar" style="width:20px;height:20px;"></i><span class="nav-label">Book Appointment</span></a>
+<a href="/dashboard/patient/history/" class="nav-link"><i data-lucide="heart-pulse" style="width:20px;height:20px;"></i><span class="nav-label">Medical History</span></a>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div><div class="page-header-title">Health Card</div><div class="page-header-sub">Your personal MediScan QR health card</div></div>
+</div>
+<div class="grid-2">
+  <div>
+    <div class="qr-card" style="margin-bottom:1.5rem;">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+        <div>
+          <div style="font-size:0.55rem;font-weight:900;text-transform:uppercase;letter-spacing:0.2em;opacity:0.7;margin-bottom:0.75rem;">MediScan Health Card</div>
+          <div style="font-size:1.75rem;font-weight:900;font-style:italic;letter-spacing:-0.04em;" id="card-name">Loading…</div>
+          <div style="font-size:0.7rem;opacity:0.7;margin-top:0.375rem;" id="card-uhid">UHID: —</div>
+        </div>
+        <div style="width:5.5rem;height:5.5rem;background:rgba(255,255,255,0.15);border-radius:1rem;display:flex;align-items:center;justify-content:center;">
+          <i data-lucide="qr-code" style="width:3.5rem;height:3.5rem;color:white;opacity:0.9;"></i>
+        </div>
+      </div>
+      <div style="margin-top:1.5rem;display:flex;gap:0.75rem;flex-wrap:wrap;" id="card-tags"></div>
+    </div>
+    <div class="card-premium">
+      <h4 style="font-family:var(--font-display);font-size:1rem;font-weight:800;color:#111827;letter-spacing:-0.03em;margin-bottom:1.25rem;">Personal Details</h4>
+      <div id="personal-details"><div class="empty-state"><p>Loading…</p></div></div>
+    </div>
+  </div>
+  <div>
+    <div class="card-premium" style="margin-bottom:1.5rem;">
+      <h4 style="font-family:var(--font-display);font-size:1rem;font-weight:800;color:#111827;letter-spacing:-0.03em;margin-bottom:1.25rem;">Quick Actions</h4>
+      <div style="display:flex;flex-direction:column;gap:0.75rem;">
+        <button onclick="openEditModal()" style="display:flex;align-items:center;gap:1rem;padding:1rem 1.25rem;border-radius:1rem;background:#F9FAFB;border:1px solid #F3F4F6;text-decoration:none;width:100%;text-align:left;">
+          <div style="width:2.5rem;height:2.5rem;border-radius:0.75rem;background:#FEF3C7;display:flex;align-items:center;justify-content:center;"><i data-lucide="user-cog" style="width:18px;height:18px;color:#D97706;"></i></div>
+          <div><div style="font-size:0.875rem;font-weight:700;color:#111827;">Edit Profile</div><div style="font-size:0.7rem;color:#9CA3AF;">Update your bio and info</div></div>
+        </button>
+        <a href="/dashboard/patient/book/" style="display:flex;align-items:center;gap:1rem;padding:1rem 1.25rem;border-radius:1rem;background:#F9FAFB;border:1px solid #F3F4F6;text-decoration:none;">
+          <div style="width:2.5rem;height:2.5rem;border-radius:0.75rem;background:#ECFDF5;display:flex;align-items:center;justify-content:center;"><i data-lucide="calendar-plus" style="width:18px;height:18px;color:#0F6E56;"></i></div>
+          <div><div style="font-size:0.875rem;font-weight:700;color:#111827;">Book Appointment</div><div style="font-size:0.7rem;color:#9CA3AF;">Schedule a consultation</div></div>
+        </a>
+        <a href="/dashboard/patient/history/" style="display:flex;align-items:center;gap:1rem;padding:1rem 1.25rem;border-radius:1rem;background:#F9FAFB;border:1px solid #F3F4F6;text-decoration:none;">
+          <div style="width:2.5rem;height:2.5rem;border-radius:0.75rem;background:#EFF6FF;display:flex;align-items:center;justify-content:center;"><i data-lucide="heart-pulse" style="width:18px;height:18px;color:#2563EB;"></i></div>
+          <div><div style="font-size:0.875rem;font-weight:700;color:#111827;">Medical History</div><div style="font-size:0.7rem;color:#9CA3AF;">View past treatments</div></div>
+        </a>
+      </div>
+    </div>
+    <div class="card-premium">
+      <h4 style="font-family:var(--font-display);font-size:1rem;font-weight:800;color:#111827;letter-spacing:-0.03em;margin-bottom:1rem;">How to Use</h4>
+      <ul style="display:flex;flex-direction:column;gap:0.75rem;">
+        <li style="display:flex;gap:0.75rem;font-size:0.8rem;color:#6B7280;"><i data-lucide="check-circle" style="width:16px;height:16px;color:#0F6E56;flex-shrink:0;"></i>Show QR code to any MediScan receptionist</li>
+        <li style="display:flex;gap:0.75rem;font-size:0.8rem;color:#6B7280;"><i data-lucide="check-circle" style="width:16px;height:16px;color:#0F6E56;flex-shrink:0;"></i>Book appointments without waiting in queues</li>
+        <li style="display:flex;gap:0.75rem;font-size:0.8rem;color:#6B7280;"><i data-lucide="check-circle" style="width:16px;height:16px;color:#0F6E56;flex-shrink:0;"></i>Your data is encrypted and secure</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- Edit Profile Modal -->
+<div class="modal-backdrop" id="edit-profile-modal">
+  <div class="modal-box" style="max-width:560px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:2rem;">
+      <h3 style="font-family:var(--font-display);font-size:1.25rem;font-weight:900;color:#111827;letter-spacing:-0.04em;text-transform:uppercase;">Edit Personal Profile</h3>
+      <button onclick="closeModal('edit-profile-modal')" style="color:#9CA3AF;"><i data-lucide="x" style="width:20px;height:20px;"></i></button>
+    </div>
+    <form id="edit-profile-form" onsubmit="handleUpdateProfile(event)" style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;">
+      <div style="grid-column: span 2;">
+        <label style="font-size:0.6rem;font-weight:900;text-transform:uppercase;letter-spacing:0.1em;color:#9CA3AF;margin-bottom:0.5rem;display:block;">Full Name</label>
+        <input type="text" name="full_name" required class="input-field" />
+      </div>
+      <div>
+        <label style="font-size:0.6rem;font-weight:900;text-transform:uppercase;letter-spacing:0.1em;color:#9CA3AF;margin-bottom:0.5rem;display:block;">Phone Number</label>
+        <input type="text" name="phone" required class="input-field" />
+      </div>
+      <div>
+        <label style="font-size:0.6rem;font-weight:900;text-transform:uppercase;letter-spacing:0.1em;color:#9CA3AF;margin-bottom:0.5rem;display:block;">Email Address</label>
+        <input type="email" name="email" required class="input-field" />
+      </div>
+      <div>
+        <label style="font-size:0.6rem;font-weight:900;text-transform:uppercase;letter-spacing:0.1em;color:#9CA3AF;margin-bottom:0.5rem;display:block;">Age</label>
+        <input type="number" name="age" required class="input-field" />
+      </div>
+      <div>
+        <label style="font-size:0.6rem;font-weight:900;text-transform:uppercase;letter-spacing:0.1em;color:#9CA3AF;margin-bottom:0.5rem;display:block;">Gender</label>
+        <select name="gender" class="input-field">
+          <option value="Male">Male</option>
+          <option value="Female">Female</option>
+          <option value="Other">Other</option>
+        </select>
+      </div>
+      <div>
+        <label style="font-size:0.6rem;font-weight:900;text-transform:uppercase;letter-spacing:0.1em;color:#9CA3AF;margin-bottom:0.5rem;display:block;">Blood Group</label>
+        <select name="blood_group" class="input-field">
+          <option value="A+">A+</option><option value="A-">A-</option>
+          <option value="B+">B+</option><option value="B-">B-</option>
+          <option value="O+">O+</option><option value="O-">O-</option>
+          <option value="AB+">AB+</option><option value="AB-">AB-</option>
+        </select>
+      </div>
+      <div>
+        <label style="font-size:0.6rem;font-weight:900;text-transform:uppercase;letter-spacing:0.1em;color:#9CA3AF;margin-bottom:0.5rem;display:block;">Marital Status</label>
+        <select name="marital_status" class="input-field">
+          <option value="single">Single</option>
+          <option value="married">Married</option>
+          <option value="divorced">Divorced</option>
+        </select>
+      </div>
+      <div style="grid-column: span 2;">
+        <label style="font-size:0.6rem;font-weight:900;text-transform:uppercase;letter-spacing:0.1em;color:#9CA3AF;margin-bottom:0.5rem;display:block;">Occupation</label>
+        <input type="text" name="occupation" class="input-field" />
+      </div>
+      <div style="grid-column: span 2;">
+        <label style="font-size:0.6rem;font-weight:900;text-transform:uppercase;letter-spacing:0.1em;color:#9CA3AF;margin-bottom:0.5rem;display:block;">Home Address</label>
+        <textarea name="address" class="input-field" style="height:4rem;"></textarea>
+      </div>
+      <div style="grid-column: span 2; display:flex; gap:1rem; margin-top:1rem;">
+        <button type="button" onclick="closeModal('edit-profile-modal')" class="btn-secondary" style="flex:1;">Cancel</button>
+        <button type="submit" class="btn-primary" style="flex:1;">Save Changes</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let currentPatient = null;
+
+document.addEventListener('DOMContentLoaded', async () => {
+  const user = requireAuth(['patient']);
+  if (!user) return;
+  populateTopbar(user);
+  await loadProfile();
+});
+
+async function loadProfile() {
+  try {
+    const me = await Auth.get('/api/auth/profile/');
+    currentPatient = await Auth.get('/api/patients/' + me.uhid + '/');
+    
+    document.getElementById('card-name').textContent = currentPatient.full_name || currentPatient.username;
+    document.getElementById('card-uhid').textContent = 'UHID: ' + (currentPatient.uhid || 'Not assigned');
+    
+    const tags = document.getElementById('card-tags');
+    tags.innerHTML = '';
+    [currentPatient.blood_group, currentPatient.age ? currentPatient.age + ' yrs' : null, currentPatient.gender].filter(Boolean).forEach(t => {
+      tags.innerHTML += `<span style="background:rgba(255,255,255,0.2);padding:0.3rem 0.875rem;border-radius:999px;font-size:0.6rem;font-weight:800;">${t}</span>`;
+    });
+
+    document.getElementById('personal-details').innerHTML = [
+        ['Phone',currentPatient.phone||'—'],
+        ['Email',currentPatient.email||'—'],
+        ['Gender',currentPatient.gender||'—'],
+        ['Blood',currentPatient.blood_group||'—'],
+        ['Marital',currentPatient.marital_status||'—'],
+        ['Occupation',currentPatient.occupation||'—']
+    ].map(([k,v])=>`
+      <div style="display:flex;justify-content:space-between;padding:0.625rem 0;border-bottom:1px solid #F9FAFB;">
+        <span style="font-size:0.65rem;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:#9CA3AF;">${k}</span>
+        <span style="font-size:0.875rem;font-weight:700;color:#111827;">${v}</span>
+      </div>`).join('');
+      
+    if(window.lucide) lucide.createIcons();
+  } catch(e) { 
+    showToast('Failed to load profile data.', 'error');
+  }
+}
+
+function openEditModal() {
+  if (!currentPatient) return;
+  const form = document.getElementById('edit-profile-form');
+  ['full_name','phone','email','age','gender','blood_group','marital_status','occupation','address'].forEach(f => {
+    if(form[f]) form[f].value = currentPatient[f] || '';
+  });
+  openModal('edit-profile-modal');
+}
+
+async function handleUpdateProfile(e) {
+  e.preventDefault();
+  const form = e.target;
+  const data = {};
+  new FormData(form).forEach((v, k) => data[k] = v);
+
+  try {
+    await Auth.patch('/api/patients/' + currentPatient.uhid + '/', data);
+    showToast('Profile updated successfully!');
+    closeModal('edit-profile-modal');
+    await loadProfile();
+  } catch(e) {
+    showToast('Failed to update profile. Please check all fields.', 'error');
+  }
+}
+
+function openModal(id)  { document.getElementById(id).classList.add('open'); if(window.lucide) lucide.createIcons(); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+</script>
+{% endblock %}
